@@ -46,7 +46,7 @@ router.post('/products', (req, res) => {
   const result = db.prepare(`
     INSERT INTO products (category_id,name,slug,sku,description,retail_price,wholesale_price,weight,stock_qty,min_stock_alert,specifications,images)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-  `).run(category_id || null, name, slug, sku, description, price, price, weight||0, stock_qty||0, min_stock_alert||10,
+  `).run(category_id || null, name, slug, sku, description || null, price, price, weight||0, stock_qty||0, min_stock_alert||10,
     JSON.stringify(specifications||{}), JSON.stringify(images||[]));
   const product = db.prepare('SELECT * FROM products WHERE id=?').get(result.lastInsertRowid);
   res.status(201).json({ ...product, specifications: JSON.parse(product.specifications), images: JSON.parse(product.images) });
@@ -58,7 +58,7 @@ router.put('/products/:id', (req, res) => {
   db.prepare(`
     UPDATE products SET category_id=?,name=?,sku=?,description=?,retail_price=?,wholesale_price=?,
     weight=?,stock_qty=?,min_stock_alert=?,specifications=?,images=?,is_active=? WHERE id=?
-  `).run(category_id || null, name, sku, description, price, price, weight, stock_qty, min_stock_alert,
+  `).run(category_id || null, name, sku, description || null, price, price, weight||0, stock_qty||0, min_stock_alert||10,
     JSON.stringify(specifications||{}), JSON.stringify(images||[]), is_active ?? 1, req.params.id);
   const product = db.prepare('SELECT * FROM products WHERE id=?').get(req.params.id);
   res.json({ ...product, specifications: JSON.parse(product.specifications), images: JSON.parse(product.images) });
@@ -83,13 +83,13 @@ router.get('/categories', (req, res) => {
 router.post('/categories', (req, res) => {
   const { name, description, image_url, sort_order } = req.body;
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const result = db.prepare('INSERT INTO categories (name,slug,description,image_url,sort_order) VALUES (?,?,?,?,?)').run(name, slug, description, image_url, sort_order||0);
+  const result = db.prepare('INSERT INTO categories (name,slug,description,image_url,sort_order) VALUES (?,?,?,?,?)').run(name, slug, description || null, image_url || null, sort_order||0);
   res.status(201).json(db.prepare('SELECT * FROM categories WHERE id=?').get(result.lastInsertRowid));
 });
 
 router.put('/categories/:id', (req, res) => {
   const { name, description, image_url, sort_order } = req.body;
-  db.prepare('UPDATE categories SET name=?,description=?,image_url=?,sort_order=? WHERE id=?').run(name, description, image_url, sort_order, req.params.id);
+  db.prepare('UPDATE categories SET name=?,description=?,image_url=?,sort_order=? WHERE id=?').run(name, description || null, image_url || null, sort_order || 0, req.params.id);
   res.json(db.prepare('SELECT * FROM categories WHERE id=?').get(req.params.id));
 });
 
@@ -110,7 +110,7 @@ router.put('/customers/:id/status', (req, res) => {
   const { status, notes } = req.body;
   if (!['approved','rejected','pending'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
   const approved_at = status === 'approved' ? new Date().toISOString() : null;
-  db.prepare('UPDATE users SET status=?, notes=?, approved_at=? WHERE id=?').run(status, notes, approved_at, req.params.id);
+  db.prepare('UPDATE users SET status=?, notes=?, approved_at=? WHERE id=?').run(status, notes || null, approved_at, req.params.id);
   res.json(db.prepare('SELECT id,email,company_name,status,approved_at FROM users WHERE id=?').get(req.params.id));
 });
 
@@ -138,7 +138,7 @@ router.put('/orders/:id', (req, res) => {
   const { status, tracking_number, shipping_carrier, notes } = req.body;
   const prev = db.prepare('SELECT status FROM orders WHERE id=?').get(req.params.id);
   db.prepare(`UPDATE orders SET status=?,tracking_number=?,shipping_carrier=?,notes=?,updated_at=datetime('now') WHERE id=?`)
-    .run(status, tracking_number, shipping_carrier, notes, req.params.id);
+    .run(status, tracking_number || null, shipping_carrier || null, notes || null, req.params.id);
   const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
   const items = db.prepare('SELECT * FROM order_items WHERE order_id=?').all(order.id);
 

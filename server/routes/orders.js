@@ -45,7 +45,7 @@ router.post('/', authenticate, requireApproved, (req, res) => {
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(orderNumber, req.user.id, subtotal, shippingCost, 0, total,
       shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip,
-      shipping_method, notes);
+      shipping_method, notes || null);
 
     const orderId = orderResult.lastInsertRowid;
     for (const item of cartItems) {

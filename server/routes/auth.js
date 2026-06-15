@@ -64,7 +64,7 @@ router.put('/profile', authenticate, async (req, res) => {
   const { contact_name, phone, address, city, state, zip } = req.body;
   db.prepare(`
     UPDATE users SET contact_name=?, phone=?, address=?, city=?, state=?, zip=? WHERE id=?
-  `).run(contact_name, phone, address, city, state, zip, req.user.id);
+  `).run(contact_name || null, phone || null, address || null, city || null, state || null, zip || null, req.user.id);
   const user = db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);
   const { password_hash, ...safeUser } = user;
   res.json(safeUser);
