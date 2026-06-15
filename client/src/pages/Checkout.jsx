@@ -230,8 +230,14 @@ function CheckoutForm() {
                   <div className="stripe-card-wrapper">
                     <CardElement options={{
                       style: {
-                        base: { fontSize: '15px', color: '#111827', fontFamily: 'Inter, sans-serif', '::placeholder': { color: '#9ca3af' } },
-                        invalid: { color: '#dc2626' }
+                        base: {
+                          fontSize: '16px',
+                          color: '#f5f5f7',
+                          fontFamily: '-apple-system, Inter, sans-serif',
+                          iconColor: '#D4A23A',
+                          '::placeholder': { color: '#6e6e73' }
+                        },
+                        invalid: { color: '#ff453a', iconColor: '#ff453a' }
                       }
                     }} />
                   </div>
