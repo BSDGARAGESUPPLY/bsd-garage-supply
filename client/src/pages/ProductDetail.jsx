@@ -61,7 +61,12 @@ export default function ProductDetail() {
               {product.images?.[0]
                 ? <img src={product.images[0]} alt={product.name} />
                 : <div className="pd-img-placeholder">
-                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/></svg>
+                    <svg width="96" height="96" viewBox="0 0 64 64" fill="none">
+                      <ellipse cx="32" cy="20" rx="16" ry="6" stroke="#D4A23A" strokeWidth="3" />
+                      <ellipse cx="32" cy="32" rx="16" ry="6" stroke="#D4A23A" strokeWidth="3" />
+                      <ellipse cx="32" cy="44" rx="16" ry="6" stroke="#D4A23A" strokeWidth="3" />
+                    </svg>
+                    <span>BSD Garage Supply</span>
                   </div>}
             </div>
             {product.images?.length > 1 && (

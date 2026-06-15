@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bsdGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5D873"/>
+      <stop offset="0.5" stop-color="#D4A23A"/>
+      <stop offset="1" stop-color="#A87B22"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0A0A0A"/>
+  <g fill="none" stroke="url(#bsdGold)" stroke-width="5" stroke-linecap="round">
+    <ellipse cx="32" cy="19" rx="15" ry="6"/>
+    <ellipse cx="32" cy="32" rx="15" ry="6"/>
+    <ellipse cx="32" cy="45" rx="15" ry="6"/>
+  </g>
+</svg>
