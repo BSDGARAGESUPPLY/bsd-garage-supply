@@ -197,7 +197,7 @@ function CheckoutForm() {
                         {rate.note && <span className="shipping-rate-note">{rate.note}</span>}
                       </div>
                       <div className="shipping-rate-details">
-                        {rate.carrier} · Est. {rate.estimated_days} business day{rate.estimated_days !== '1' ? 's' : ''}
+                        {rate.details || `${rate.carrier} · Est. ${rate.estimated_days} business day${rate.estimated_days !== '1' ? 's' : ''}`}
                       </div>
                     </div>
                     <div className="shipping-rate-price">

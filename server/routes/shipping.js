@@ -27,30 +27,20 @@ function getZone(state) {
 }
 
 router.post('/rates', authenticate, requireApproved, (req, res) => {
-  const { state, weight, subtotal } = req.body;
-  if (!state) return res.status(400).json({ error: 'State required' });
-
-  const zone = getZone(state);
-  const weightNum = parseFloat(weight) || 5;
-
-  const rates = Object.entries(BASE_RATES).map(([id, method]) => {
-    let cost = method.base[zone] + weightNum * PER_LB;
-    let note = '';
-    if (id === 'ground' && subtotal >= FREE_GROUND_THRESHOLD) {
-      cost = 0;
-      note = 'FREE on orders over $500';
-    }
-    return {
-      id,
-      name: method.name,
-      carrier: method.carrier,
-      cost: parseFloat(cost.toFixed(2)),
-      note,
-      estimated_days: { ground: '5-7', express3: '3', express2: '2', overnight: '1' }[id]
-    };
+  // Pickup only for now — shipping rates will be added once finalized.
+  // (Zone/rate tables above are kept for when shipping is re-enabled.)
+  res.json({
+    rates: [{
+      id: 'pickup',
+      name: 'Local Pickup',
+      carrier: 'BSD Garage Supply',
+      cost: 0,
+      note: 'FREE',
+      estimated_days: '1',
+      details: "Pick up at our Estero, FL location — we'll notify you when your order is ready."
+    }],
+    zone: 0
   });
-
-  res.json({ rates, zone });
 });
 
 module.exports = router;
