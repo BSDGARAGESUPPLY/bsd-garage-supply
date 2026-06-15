@@ -16,8 +16,8 @@ app.use(cors({
   credentials: true
 }));
 
-// Stripe webhook needs raw body
-app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
+// Stripe webhook needs the RAW body for signature verification — mount BEFORE express.json()
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), require('./routes/stripe-webhook'));
 app.use(express.json());
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 200 });

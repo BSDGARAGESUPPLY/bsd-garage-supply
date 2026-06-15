@@ -294,7 +294,7 @@ export default function Checkout() {
       <div className="page-header">
         <div className="container">
           <h1>Checkout</h1>
-          <p>Wholesale order checkout</p>
+          <p>Secure checkout — pay safely with any card</p>
         </div>
       </div>
       <div className="container section-sm">

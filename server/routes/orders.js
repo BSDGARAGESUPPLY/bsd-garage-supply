@@ -2,29 +2,7 @@ const router = require('express').Router();
 const db = require('../db');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { authenticate, requireApproved } = require('../middleware/auth');
-const { sendMail, ADMIN_EMAIL } = require('../lib/mailer');
-const templates = require('../lib/emailTemplates');
-
-// Send order confirmation to the customer + new-order alert to the owner.
-function sendOrderEmails(orderId) {
-  try {
-    const order = db.prepare(`
-      SELECT o.*, u.email as customer_email, u.company_name, u.contact_name, u.phone
-      FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = ?
-    `).get(orderId);
-    if (!order) return;
-    const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId);
-
-    const conf = templates.orderConfirmation(order, items);
-    sendMail({ to: order.customer_email, subject: conf.subject, html: conf.html });
-
-    const customer = { company_name: order.company_name, contact_name: order.contact_name, email: order.customer_email, phone: order.phone };
-    const alert = templates.newOrderAdmin(order, items, customer);
-    sendMail({ to: ADMIN_EMAIL, subject: alert.subject, html: alert.html });
-  } catch (err) {
-    console.error('Order email error:', err.message);
-  }
-}
+const { fulfillOrder } = require('../lib/fulfillment');
 
 const generateOrderNumber = () => {
   const ts = Date.now().toString(36).toUpperCase();
@@ -115,55 +93,14 @@ router.post('/:id/confirm', authenticate, requireApproved, async (req, res) => {
       return res.status(400).json({ error: 'Payment not confirmed' });
     }
 
-    db.exec('BEGIN');
-    const items = db.prepare('SELECT * FROM order_items WHERE order_id=?').all(order.id);
-    for (const item of items) {
-      db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id=?').run(item.quantity, item.product_id);
-    }
-    db.prepare('DELETE FROM cart_items WHERE user_id=?').run(order.user_id);
-    db.prepare(`UPDATE orders SET status='processing', payment_status='paid', updated_at=datetime('now') WHERE id=?`).run(order.id);
-    db.exec('COMMIT');
-
-    sendOrderEmails(order.id);
+    // Decrement stock, clear cart, mark paid, send emails (idempotent).
+    fulfillOrder(order.id);
 
     const updated = db.prepare('SELECT * FROM orders WHERE id=?').get(order.id);
     res.json(updated);
   } catch (err) {
-    db.exec('ROLLBACK');
     res.status(500).json({ error: 'Payment verification error: ' + err.message });
   }
-});
-
-// Stripe webhook
-router.post('/webhooks/stripe', (req, res) => {
-  const sig = req.headers['stripe-signature'];
-  let event;
-  try {
-    event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch (err) {
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  if (event.type === 'payment_intent.succeeded') {
-    const intent = event.data.object;
-    const order = db.prepare('SELECT * FROM orders WHERE payment_intent_id=?').get(intent.id);
-    if (order && order.payment_status !== 'paid') {
-      try {
-        db.exec('BEGIN');
-        const items = db.prepare('SELECT * FROM order_items WHERE order_id=?').all(order.id);
-        for (const item of items) {
-          db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id=?').run(item.quantity, item.product_id);
-        }
-        db.prepare('DELETE FROM cart_items WHERE user_id=?').run(order.user_id);
-        db.prepare(`UPDATE orders SET status='processing', payment_status='paid', updated_at=datetime('now') WHERE id=?`).run(order.id);
-        db.exec('COMMIT');
-        sendOrderEmails(order.id);
-      } catch {
-        db.exec('ROLLBACK');
-      }
-    }
-  }
-  res.json({ received: true });
 });
 
 // Get user's orders
