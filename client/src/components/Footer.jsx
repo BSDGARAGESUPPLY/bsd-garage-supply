@@ -24,8 +24,9 @@ export default function Footer() {
             contractors, and repair companies — fast shipping, fair pricing.
           </p>
           <div className="footer-contact">
-            <div>📞 1-800-BSD-SPRING</div>
-            <div>✉ Bsdgaragesupply@gmail.com</div>
+            <div>📞 <a href="tel:+18888444701">1-888-844-4701</a></div>
+            <div>✉ <a href="mailto:bsdgaragesupply@gmail.com">Bsdgaragesupply@gmail.com</a></div>
+            <div>📍 2634 NE 9th Ave, Cape Coral, FL 33909</div>
             <div>🕐 Mon–Fri 7am–6pm CT</div>
           </div>
         </div>
@@ -56,6 +57,19 @@ export default function Footer() {
             <li><Link to="/terms">Terms of Service</Link></li>
           </ul>
         </div>
+      </div>
+
+      {/* Location map */}
+      <div className="container footer-map-wrap">
+        <div className="footer-map-label">📍 Visit us · 2634 NE 9th Ave, Cape Coral, FL 33909</div>
+        <iframe
+          title="BSD Garage Supply location"
+          className="footer-map"
+          src="https://www.google.com/maps?q=2634%20NE%209th%20Ave,%20Cape%20Coral,%20FL%2033909&output=embed"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          allowFullScreen
+        />
       </div>
 
       <div className="footer-bottom">

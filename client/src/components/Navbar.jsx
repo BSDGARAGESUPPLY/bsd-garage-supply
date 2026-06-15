@@ -21,7 +21,7 @@ export default function Navbar() {
     <header className="navbar">
       <div className="navbar-top">
         <div className="container navbar-top-inner">
-          <span>📞 1-800-BSD-SPRING &nbsp;|&nbsp; ✉ Bsdgaragesupply@gmail.com &nbsp;|&nbsp; Mon–Fri 7am–6pm CT</span>
+          <span>📞 1-888-844-4701 &nbsp;|&nbsp; ✉ Bsdgaragesupply@gmail.com &nbsp;|&nbsp; Mon–Fri 7am–6pm CT</span>
           <span>⭐ Free shipping on orders over $500</span>
         </div>
       </div>

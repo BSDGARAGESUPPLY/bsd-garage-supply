@@ -42,7 +42,7 @@ export default function Contact() {
               <span className="contact-info-icon">📞</span>
               <div>
                 <h4>Phone</h4>
-                <a href="tel:1-800-273-7764">1-800-BSD-SPRING</a>
+                <a href="tel:+18888444701">1-888-844-4701</a>
                 <p>Mon–Fri, 7am–6pm CT</p>
               </div>
             </div>
@@ -58,7 +58,7 @@ export default function Contact() {
               <span className="contact-info-icon">📍</span>
               <div>
                 <h4>Location</h4>
-                <p>Estero, FL 33928</p>
+                <p>2634 NE 9th Ave<br />Cape Coral, FL 33909</p>
               </div>
             </div>
             <div className="contact-info-item">

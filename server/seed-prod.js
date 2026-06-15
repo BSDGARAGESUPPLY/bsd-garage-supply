@@ -63,7 +63,7 @@ function ensureSeed(db) {
     db.prepare(`
       INSERT INTO users (email,password_hash,company_name,contact_name,phone,status,is_admin,approved_at)
       VALUES (?,?,?,?,?,'approved',1,datetime('now'))
-    `).run(adminEmail, hash, 'BSD Garage Supply', 'Admin', '1-800-BSD-SPRING');
+    `).run(adminEmail, hash, 'BSD Garage Supply', 'Admin', '1-888-844-4701');
     console.log('🌱 Seeded admin account:', adminEmail);
   }
 

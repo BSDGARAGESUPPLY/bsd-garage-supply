@@ -28,7 +28,8 @@ function layout(title, bodyHtml) {
         </td></tr>
         <!-- Footer -->
         <tr><td style="background:#fafafa;border-top:1px solid #eee;padding:24px 32px;text-align:center;font-size:12px;color:#888;">
-          BSD Garage Supply &nbsp;·&nbsp; 1-800-BSD-SPRING &nbsp;·&nbsp; bsdgaragesupply@gmail.com<br>
+          BSD Garage Supply &nbsp;·&nbsp; 1-888-844-4701 &nbsp;·&nbsp; bsdgaragesupply@gmail.com<br>
+          2634 NE 9th Ave, Cape Coral, FL 33909<br>
           <a href="${SITE_URL}" style="color:${GOLD};text-decoration:none;">${SITE_URL.replace(/^https?:\/\//, '')}</a>
         </td></tr>
       </table>

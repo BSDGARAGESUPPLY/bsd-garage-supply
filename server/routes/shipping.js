@@ -37,7 +37,7 @@ router.post('/rates', authenticate, requireApproved, (req, res) => {
       cost: 0,
       note: 'FREE',
       estimated_days: '1',
-      details: "Pick up at our Estero, FL location — we'll notify you when your order is ready."
+      details: "Pick up at 2634 NE 9th Ave, Cape Coral, FL 33909 — we'll notify you when your order is ready."
     }],
     zone: 0
   });
