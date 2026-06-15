@@ -26,6 +26,14 @@ app.use('/api/', limiter);
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 app.use('/api/auth/', authLimiter);
 
+// Public runtime config — exposes the Stripe PUBLISHABLE key (safe to be public).
+// Served at runtime so it always reflects the current env var, no rebuild needed.
+app.get('/api/config', (req, res) => {
+  res.json({
+    stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLIC_KEY || ''
+  });
+});
+
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/categories', require('./routes/categories'));

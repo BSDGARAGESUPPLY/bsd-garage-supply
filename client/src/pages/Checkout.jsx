@@ -7,7 +7,6 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import './Checkout.css';
 
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_placeholder');
 const fmt = (n) => `$${Number(n).toFixed(2)}`;
 
 const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
@@ -289,6 +288,18 @@ function CheckoutForm() {
 }
 
 export default function Checkout() {
+  const [stripePromise, setStripePromise] = useState(null);
+  const [configError, setConfigError] = useState(false);
+
+  useEffect(() => {
+    api.get('/config')
+      .then(r => {
+        if (r.data.stripePublicKey) setStripePromise(loadStripe(r.data.stripePublicKey));
+        else setConfigError(true);
+      })
+      .catch(() => setConfigError(true));
+  }, []);
+
   return (
     <div>
       <div className="page-header">
@@ -298,9 +309,15 @@ export default function Checkout() {
         </div>
       </div>
       <div className="container section-sm">
-        <Elements stripe={stripePromise}>
-          <CheckoutForm />
-        </Elements>
+        {configError ? (
+          <div className="alert alert-error">Payments are not configured yet. Please contact us to place your order.</div>
+        ) : !stripePromise ? (
+          <div className="loading-center"><div className="spinner" /></div>
+        ) : (
+          <Elements stripe={stripePromise}>
+            <CheckoutForm />
+          </Elements>
+        )}
       </div>
     </div>
   );
