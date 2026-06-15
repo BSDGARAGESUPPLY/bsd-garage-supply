@@ -95,18 +95,6 @@ export default function Catalog() {
               </ul>
             </div>
 
-            <div className="sidebar-section">
-              <h3>Sort By</h3>
-              <div className="sidebar-sort">
-                {[['name','Name A-Z'],['price_asc','Price: Low to High'],['price_desc','Price: High to Low'],['newest','Newest First']].map(([val, label]) => (
-                  <label key={val} className="sort-option">
-                    <input type="radio" name="sort" value={val} checked={sort === val} onChange={() => updateParam('sort', val)} />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {(category || search) && (
               <button className="btn btn-outline btn-sm btn-full" onClick={() => setSearchParams({})}>
                 Clear Filters
