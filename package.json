@@ -11,7 +11,7 @@
     "dev": "nodemon server/index.js",
     "seed": "node server/seed.js",
     "client": "cd client && npm run dev",
-    "build": "npm --prefix client install && npm --prefix client run build"
+    "build": "npm --prefix client install --include=dev && npm --prefix client run build"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
