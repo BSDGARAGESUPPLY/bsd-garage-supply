@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+client/node_modules/
+
+# Secrets — never commit these
+.env
+client/.env
+
+# Database (and SQLite WAL/SHM sidecar files)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+
+# Build output
+client/dist/
+
+# Uploaded files
+uploads/
+
+# Temp files
+.reset_token_tmp
+*.log

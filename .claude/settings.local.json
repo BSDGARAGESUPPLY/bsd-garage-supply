@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "PowerShell(Get-Command node, npm -ErrorAction SilentlyContinue)",
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; cd \"C:\\\\Users\\\\Dvirn\\\\Desktop\\\\website foldfer\"; node -e \"const {DatabaseSync}=require\\('node:sqlite'\\);const db=new DatabaseSync\\('./database.sqlite'\\);db.exec\\(\\\\\"UPDATE users SET company_name='BSD Garage Supply' WHERE email='bsdgaragesupply@gmail.com'\\\\\"\\);const row=db.prepare\\('SELECT email,company_name,is_admin FROM users WHERE email=?'\\).get\\('bsdgaragesupply@gmail.com'\\);console.log\\(JSON.stringify\\(row\\)\\);\")"
+    ]
+  }
+}
