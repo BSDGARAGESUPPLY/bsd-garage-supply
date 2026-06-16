@@ -37,6 +37,20 @@ export default function AdminCustomers() {
     setNotes(customer.notes || '');
   };
 
+  const handleDelete = async (id, name) => {
+    if (!confirm(`Remove ${name || 'this customer'}? This permanently deletes their account and cannot be undone.`)) return;
+    setActionLoading(true);
+    try {
+      await api.delete(`/admin/customers/${id}`);
+      setSelected(null);
+      fetchCustomers();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not remove customer.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div className="admin-page">
       <div className="admin-page-header">
@@ -76,7 +90,10 @@ export default function AdminCustomers() {
                     <td style={{fontSize:'13px', color:'var(--text-secondary)'}}>{new Date(c.created_at).toLocaleDateString()}</td>
                     <td><span className={`badge status-${c.status}`}>{c.status}</span></td>
                     <td>
-                      <button className="btn btn-outline btn-sm" onClick={() => openCustomer(c.id)}>Review</button>
+                      <div style={{display:'flex', gap:'6px'}}>
+                        <button className="btn btn-outline btn-sm" onClick={() => openCustomer(c.id)}>Review</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(c.id, c.company_name)}>Remove</button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -123,8 +140,9 @@ export default function AdminCustomers() {
               </div>
             </div>
             <div className="modal-footer">
+              <button className="btn btn-danger" style={{marginRight:'auto'}} onClick={() => handleDelete(selected.id, selected.company_name)} disabled={actionLoading}>Remove Customer</button>
               {selected.status !== 'rejected' && (
-                <button className="btn btn-danger" onClick={() => handleStatus(selected.id, 'rejected')} disabled={actionLoading}>Reject</button>
+                <button className="btn btn-outline" onClick={() => handleStatus(selected.id, 'rejected')} disabled={actionLoading}>Reject</button>
               )}
               {selected.status !== 'approved' && (
                 <button className={`btn btn-primary ${actionLoading ? 'btn-loading' : ''}`} onClick={() => handleStatus(selected.id, 'approved')} disabled={actionLoading}>

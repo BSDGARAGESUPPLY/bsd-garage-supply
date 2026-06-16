@@ -121,6 +121,19 @@ router.get('/customers/:id', (req, res) => {
   res.json({ ...user, orders });
 });
 
+// Remove a customer (cart + reset tokens cascade automatically).
+router.delete('/customers/:id', (req, res) => {
+  const user = db.prepare('SELECT id, is_admin FROM users WHERE id=?').get(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Customer not found' });
+  if (user.is_admin) return res.status(403).json({ error: 'You cannot delete an admin account.' });
+  const orderCount = db.prepare('SELECT COUNT(*) AS c FROM orders WHERE user_id=?').get(req.params.id).c;
+  if (orderCount > 0) {
+    return res.status(400).json({ error: `This customer has ${orderCount} order(s) on record and can't be deleted — their sales history must be preserved.` });
+  }
+  db.prepare('DELETE FROM users WHERE id=?').run(req.params.id);
+  res.json({ message: 'Customer removed' });
+});
+
 // Orders
 router.get('/orders', (req, res) => {
   const { status, page = 1 } = req.query;
