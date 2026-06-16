@@ -91,6 +91,9 @@ export default function Home() {
               <Link key={cat.id} to={`/catalog?category=${cat.slug}`} className="category-card">
                 <div className="category-icon">{catIcons[cat.slug] || '⚙️'}</div>
                 <h3>{cat.name}</h3>
+                {cat.product_count != null && (
+                  <div className="category-count">{cat.product_count} product{cat.product_count !== 1 ? 's' : ''}</div>
+                )}
                 <p>{cat.description?.substring(0, 90)}</p>
                 <span className="text-link">Shop now</span>
               </Link>

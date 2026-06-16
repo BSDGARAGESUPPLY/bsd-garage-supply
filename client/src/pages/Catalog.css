@@ -22,9 +22,23 @@
   width: 100%; text-align: left; padding: 10px 14px; border-radius: var(--radius-pill);
   background: none; border: none; font-size: 14px; color: var(--text-secondary);
   transition: all var(--transition-fast); cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
 .sidebar-cats button:hover { background: rgba(255,255,255,0.06); color: var(--white); }
 .sidebar-cats button.active { background: var(--gold-bg); color: var(--gold); font-weight: 500; }
+.sidebar-cat-count { font-size: 11px; font-weight: 600; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 1px 8px; border-radius: var(--radius-pill); }
+.sidebar-cats button.active .sidebar-cat-count { color: var(--gold); background: var(--gold-bg); }
+
+/* Spec filter pills */
+.filter-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+.filter-pill {
+  font-size: 13px; font-weight: 500; color: var(--text-secondary);
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12);
+  padding: 6px 12px; border-radius: var(--radius-pill); cursor: pointer;
+  transition: all var(--transition-fast); white-space: nowrap;
+}
+.filter-pill:hover { border-color: var(--gold-border); color: var(--white); }
+.filter-pill.active { background: var(--gold-bg); border-color: var(--gold); color: var(--gold); font-weight: 600; }
 
 .sidebar-sort { display: flex; flex-direction: column; gap: 8px; }
 .sort-option { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-secondary); cursor: pointer; padding: 4px 0; }

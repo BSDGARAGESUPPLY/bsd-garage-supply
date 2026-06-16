@@ -68,6 +68,11 @@
 .category-card:hover { transform: translateY(-6px); border-color: var(--gold-border); box-shadow: var(--shadow-md); }
 .category-icon { font-size: 44px; margin-bottom: 4px; }
 .category-card h3 { font-size: 22px; font-weight: 600; color: var(--white); letter-spacing: -0.02em; }
+.category-count {
+  font-size: 12px; font-weight: 600; color: var(--gold);
+  background: var(--gold-bg); border: 1px solid var(--gold-border);
+  padding: 3px 12px; border-radius: var(--radius-pill);
+}
 .category-card p { font-size: 15px; color: var(--text-secondary); line-height: 1.5; flex: 1; }
 .category-card .text-link { margin-top: 6px; }
 

@@ -6,6 +6,23 @@ import './ProductCard.css';
 
 const fmt = (n) => `$${Number(n).toFixed(2)}`;
 
+// Pull the most useful specs to show as quick-scan chips on the card.
+function specChips(specs) {
+  if (!specs || typeof specs !== 'object') return [];
+  if (specs['Wire Diameter']) {
+    // Torsion spring — show wire / ID / length / wind
+    const chips = [];
+    if (specs['Wire Diameter']) chips.push(`${specs['Wire Diameter']} wire`);
+    if (specs['Inside Diameter']) chips.push(`${specs['Inside Diameter']} ID`);
+    if (specs['Coil Length']) chips.push(specs['Coil Length']);
+    if (specs['Wind Direction']) chips.push(specs['Wind Direction'].includes('Left') ? 'LH' : 'RH');
+    return chips;
+  }
+  // Hardware — show a couple of relevant specs
+  const skip = ['Application', 'Sold As'];
+  return Object.entries(specs).filter(([k]) => !skip.includes(k)).slice(0, 3).map(([, v]) => v);
+}
+
 export default function ProductCard({ product }) {
   const { isApproved } = useAuth();
   const { addToCart } = useCart();
@@ -49,6 +66,13 @@ export default function ProductCard({ product }) {
       <div className="product-card-body">
         <div className="product-card-sku">SKU: {product.sku}</div>
         <h3 className="product-card-name">{product.name}</h3>
+        {specChips(product.specifications).length > 0 && (
+          <div className="product-card-specs">
+            {specChips(product.specifications).map((c, i) => (
+              <span key={i} className="product-spec-chip">{c}</span>
+            ))}
+          </div>
+        )}
         <div className="product-card-pricing">
           {isApproved ? (
             <span className="product-price">{fmt(product.price)}</span>
