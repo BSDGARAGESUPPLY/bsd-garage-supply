@@ -23,7 +23,7 @@
   overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: #fff;
 }
 .img-thumb.is-main { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-bg); }
-.img-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.img-thumb img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
 
 .img-main-badge {
   position: absolute; bottom: 6px; left: 6px;

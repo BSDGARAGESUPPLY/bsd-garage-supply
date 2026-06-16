@@ -40,7 +40,7 @@
 .checkout-items { list-style: none; display: flex; flex-direction: column; gap: 14px; }
 .checkout-item { display: flex; align-items: center; gap: 12px; }
 .checkout-item-img { position: relative; width: 56px; height: 56px; flex-shrink: 0; }
-.checkout-item-img img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--gold-border); }
+.checkout-item-img img { width: 100%; height: 100%; object-fit: contain; padding: 3px; background: #fff; border-radius: var(--radius-sm); border: 1px solid var(--gold-border); }
 .checkout-item-placeholder { width: 100%; height: 100%; background: var(--black-3); border-radius: var(--radius-sm); border: 1px solid var(--gold-border); }
 .checkout-item-qty {
   position: absolute; top: -6px; right: -6px;
