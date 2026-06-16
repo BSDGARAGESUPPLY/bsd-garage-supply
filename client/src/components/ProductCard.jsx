@@ -7,15 +7,16 @@ import './ProductCard.css';
 const fmt = (n) => `$${Number(n).toFixed(2)}`;
 
 // Pull the most useful specs to show as quick-scan chips on the card.
-function specChips(specs) {
+function specChips(specs, isPair) {
   if (!specs || typeof specs !== 'object') return [];
   if (specs['Wire Diameter']) {
-    // Torsion spring — show wire / ID / length / wind
+    // Torsion spring — show wire / ID / length (+ wind, unless it's a Left/Right pair card)
     const chips = [];
     if (specs['Wire Diameter']) chips.push(`${specs['Wire Diameter']} wire`);
     if (specs['Inside Diameter']) chips.push(`${specs['Inside Diameter']} ID`);
     if (specs['Coil Length']) chips.push(specs['Coil Length']);
-    if (specs['Wind Direction']) chips.push(specs['Wind Direction'].includes('Left') ? 'LH' : 'RH');
+    if (specs['Unit Weight']) chips.push(specs['Unit Weight']);
+    if (!isPair && specs['Wind Direction']) chips.push(specs['Wind Direction'].includes('Left') ? 'LH' : 'RH');
     return chips;
   }
   // Hardware — show a couple of relevant specs
@@ -64,13 +65,19 @@ export default function ProductCard({ product }) {
         )}
       </div>
       <div className="product-card-body">
-        <div className="product-card-sku">SKU: {product.sku}</div>
-        <h3 className="product-card-name">{product.name}</h3>
-        {specChips(product.specifications).length > 0 && (
+        <div className="product-card-sku">SKU: {product._isPair ? product.sku.replace(/-[LR]$/, '') : product.sku}</div>
+        <h3 className="product-card-name">{product._isPair ? product._pairName : product.name}</h3>
+        {specChips(product.specifications, product._isPair).length > 0 && (
           <div className="product-card-specs">
-            {specChips(product.specifications).map((c, i) => (
+            {specChips(product.specifications, product._isPair).map((c, i) => (
               <span key={i} className="product-spec-chip">{c}</span>
             ))}
+          </div>
+        )}
+        {product._isPair && (
+          <div className="product-card-cones">
+            <span className="cone-dot red" /><span className="cone-dot black" />
+            <span>Left &amp; Right available</span>
           </div>
         )}
         <div className="product-card-pricing">
@@ -84,13 +91,17 @@ export default function ProductCard({ product }) {
           <div className="product-low-stock">Only {product.stock_qty} left</div>
         )}
         {isApproved ? (
-          <button
-            className={`btn btn-primary btn-sm btn-full product-atc ${adding ? 'btn-loading' : ''} ${added ? 'btn-added' : ''}`}
-            onClick={handleAddToCart}
-            disabled={!inStock || adding}
-          >
-            {added ? '✓ Added!' : inStock ? 'Add to Cart' : 'Out of Stock'}
-          </button>
+          product._isPair ? (
+            <span className="btn btn-primary btn-sm btn-full product-atc">Choose Wind →</span>
+          ) : (
+            <button
+              className={`btn btn-primary btn-sm btn-full product-atc ${adding ? 'btn-loading' : ''} ${added ? 'btn-added' : ''}`}
+              onClick={handleAddToCart}
+              disabled={!inStock || adding}
+            >
+              {added ? '✓ Added!' : inStock ? 'Add to Cart' : 'Out of Stock'}
+            </button>
+          )
         ) : (
           <span className="btn btn-outline btn-sm btn-full product-atc">Sign in to buy</span>
         )}

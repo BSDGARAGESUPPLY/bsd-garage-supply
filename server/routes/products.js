@@ -75,7 +75,25 @@ router.get('/:slug', optionalAuth, (req, res) => {
   `).get(req.params.slug, parseInt(req.params.slug) || 0);
 
   if (!product) return res.status(404).json({ error: 'Product not found' });
-  res.json(formatProduct(product, req.user));
+  const result = formatProduct(product, req.user);
+
+  // Torsion-spring L/R pair: attach both winds as selectable variants + a size-only pair name.
+  const m = product.sku && product.sku.match(/^(.*)-([LR])$/);
+  if (m) {
+    const siblings = db.prepare('SELECT * FROM products WHERE sku LIKE ? AND is_active = 1').all(m[1] + '-%');
+    if (siblings.length > 1) {
+      result.variants = siblings.map(s => {
+        const fs = formatProduct(s, req.user);
+        return {
+          id: s.id, slug: s.slug, sku: s.sku,
+          wind: fs.specifications['Wind Direction'] || (s.sku.endsWith('-L') ? 'Left Wind' : 'Right Wind'),
+          stock_qty: s.stock_qty, price: fs.price, weight: s.weight
+        };
+      }).sort((a, b) => a.wind.localeCompare(b.wind)); // Left before Right
+      result.pair_name = product.name.replace(/\s*[—-]\s*(Left|Right)\s*Wind\s*$/i, '').trim();
+    }
+  }
+  res.json(result);
 });
 
 module.exports = router;

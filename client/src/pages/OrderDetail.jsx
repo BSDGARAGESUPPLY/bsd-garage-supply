@@ -37,7 +37,7 @@ export default function OrderDetail() {
               <div className="card-header"><h3 style={{fontWeight:700}}>Order Items</h3></div>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Product</th><th>SKU</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+                  <thead><tr><th>Product</th><th>SKU</th><th>Qty</th><th>Weight</th><th>Unit Price</th><th>Total</th></tr></thead>
                   <tbody>
                     {order.items?.map(item => (
                       <tr key={item.id}>
@@ -49,6 +49,7 @@ export default function OrderDetail() {
                         </td>
                         <td style={{fontFamily:'monospace', fontSize:'12px'}}>{item.product_sku}</td>
                         <td>{item.quantity}</td>
+                        <td>{item.weight ? `${(item.weight * item.quantity).toFixed(1)} lbs` : '—'}</td>
                         <td>{fmt(item.unit_price)}</td>
                         <td><strong>{fmt(item.total_price)}</strong></td>
                       </tr>
@@ -79,6 +80,7 @@ export default function OrderDetail() {
               <div className="card-body">
                 <div style={{display:'flex', flexDirection:'column', gap:'10px', fontSize:'14px'}}>
                   <div style={{display:'flex', justifyContent:'space-between'}}><span>Subtotal</span><span>{fmt(order.subtotal)}</span></div>
+                  <div style={{display:'flex', justifyContent:'space-between'}}><span>Total Weight</span><span>{Number(order.total_weight || 0).toFixed(1)} lbs</span></div>
                   <div style={{display:'flex', justifyContent:'space-between'}}><span>Shipping ({order.shipping_method})</span><span>{fmt(order.shipping_cost)}</span></div>
                   {order.tax > 0 && <div style={{display:'flex', justifyContent:'space-between'}}><span>Tax</span><span>{fmt(order.tax)}</span></div>}
                   <hr className="divider" style={{margin:'4px 0'}}/>

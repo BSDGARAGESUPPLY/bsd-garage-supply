@@ -277,6 +277,7 @@ function CheckoutForm() {
             <hr className="divider" />
             <div className="checkout-totals">
               <div className="checkout-total-row"><span>Subtotal</span><span>{fmt(cart.subtotal)}</span></div>
+              <div className="checkout-total-row"><span>Total Weight</span><span>{totalWeight.toFixed(1)} lbs</span></div>
               <div className="checkout-total-row">
                 <span>Shipping</span>
                 <span>{selectedRate ? (selectedRate.cost === 0 ? 'FREE' : fmt(selectedRate.cost)) : '—'}</span>

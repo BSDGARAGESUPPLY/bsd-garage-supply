@@ -5,14 +5,13 @@ import ProductCard from '../components/ProductCard';
 import './Catalog.css';
 
 // Spec dimensions we let techs filter by (only show up when products have them).
+// Wind direction is chosen on the product page (Red/Black cone), so it's not a filter.
 const FILTER_DIMS = [
   { key: 'Wire Diameter', label: 'Wire Size' },
   { key: 'Coil Length', label: 'Length' },
-  { key: 'Wind Direction', label: 'Wind Direction' },
 ];
 
 const numOf = (s) => parseFloat(String(s).replace(/[^0-9.]/g, '')) || 0;
-const windLabel = (v) => (v?.includes('Left') ? 'Left (LH)' : v?.includes('Right') ? 'Right (RH)' : v);
 
 export default function Catalog() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -81,6 +80,24 @@ export default function Catalog() {
     return true;
   }), [products, filters]);
 
+  // Merge each Left/Right torsion-spring pair into a single card (wind is chosen on the product page).
+  const displayItems = useMemo(() => {
+    const seen = new Set();
+    const items = [];
+    for (const p of filtered) {
+      const mm = p.sku?.match(/^(.*)-([LR])$/);
+      if (mm) {
+        if (seen.has(mm[1])) continue;
+        seen.add(mm[1]);
+        const left = filtered.find(x => x.sku === mm[1] + '-L') || p;
+        items.push({ ...left, _isPair: true, _pairName: left.name.replace(/\s*[—-]\s*(Left|Right)\s*Wind\s*$/i, '').trim() });
+      } else {
+        items.push(p);
+      }
+    }
+    return items;
+  }, [filtered]);
+
   const hasActiveFilters = Object.values(filters).some(a => a && a.length);
   const hasAnyFilterOptions = FILTER_DIMS.some(d => (options[d.key] || []).length > 1);
   const selectedCat = categories.find(c => c.slug === category);
@@ -92,7 +109,7 @@ export default function Catalog() {
           <div className="catalog-header-inner">
             <div>
               <h1>{selectedCat ? selectedCat.name : search ? `Search: "${search}"` : 'All Products'}</h1>
-              <p>{filtered.length} product{filtered.length !== 1 ? 's' : ''}{hasActiveFilters ? ' match your filters' : ''}</p>
+              <p>{displayItems.length} product{displayItems.length !== 1 ? 's' : ''}{hasActiveFilters ? ' match your filters' : ''}</p>
             </div>
             <form className="catalog-search" onSubmit={handleSearch}>
               <input
@@ -164,7 +181,7 @@ export default function Catalog() {
           <main className="catalog-main">
             {loading ? (
               <div className="loading-center"><div className="spinner" /></div>
-            ) : filtered.length === 0 ? (
+            ) : displayItems.length === 0 ? (
               <div className="catalog-empty">
                 <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <h3>No products match</h3>
@@ -173,7 +190,7 @@ export default function Catalog() {
               </div>
             ) : (
               <div className="catalog-grid">
-                {filtered.map(p => <ProductCard key={p.id} product={p} />)}
+                {displayItems.map(p => <ProductCard key={p.id} product={p} />)}
               </div>
             )}
           </main>

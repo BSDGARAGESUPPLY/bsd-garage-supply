@@ -120,9 +120,10 @@ router.get('/:id', authenticate, (req, res) => {
   const params = req.user.is_admin ? [req.params.id] : [req.params.id, req.user.id];
   const order = db.prepare(`SELECT o.*, u.company_name, u.email as customer_email FROM orders o JOIN users u ON o.user_id=u.id WHERE ${where}`).get(...params);
   if (!order) return res.status(404).json({ error: 'Order not found' });
-  const items = db.prepare('SELECT oi.*, p.images FROM order_items oi LEFT JOIN products p ON oi.product_id=p.id WHERE oi.order_id=?').all(order.id)
+  const items = db.prepare('SELECT oi.*, p.images, p.weight FROM order_items oi LEFT JOIN products p ON oi.product_id=p.id WHERE oi.order_id=?').all(order.id)
     .map(i => ({ ...i, images: JSON.parse(i.images || '[]') }));
-  res.json({ ...order, items });
+  const total_weight = items.reduce((sum, i) => sum + (Number(i.weight) || 0) * i.quantity, 0);
+  res.json({ ...order, items, total_weight });
 });
 
 module.exports = router;
