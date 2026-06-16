@@ -25,7 +25,7 @@ export default function OrderDetail() {
             <h1>Order {order.order_number}</h1>
             <p>Placed {new Date(order.created_at).toLocaleDateString()} · <span className={`badge status-${order.status}`}>{STATUS_LABEL[order.status] || order.status}</span></p>
           </div>
-          <Link to="/orders" className="btn btn-outline-white">← Back to Orders</Link>
+          <Link to="/orders" className="btn btn-outline">← Back to Orders</Link>
         </div>
       </div>
 
