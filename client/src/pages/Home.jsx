@@ -26,7 +26,24 @@ export default function Home() {
     if (search.trim()) navigate(`/catalog?search=${encodeURIComponent(search)}`);
   };
 
-  const catIcons = { 'torsion-springs': '🌀', 'brackets-hardware': '🔧' };
+  const catIllustration = (slug) => {
+    if (slug === 'torsion-springs') return (
+      <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round">
+        <ellipse cx="40" cy="16" rx="22" ry="7" /><ellipse cx="40" cy="28" rx="22" ry="7" />
+        <ellipse cx="40" cy="40" rx="22" ry="7" /><ellipse cx="40" cy="52" rx="22" ry="7" />
+        <ellipse cx="40" cy="64" rx="22" ry="7" />
+      </svg>
+    );
+    if (slug === 'brackets-hardware') return (
+      <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M40 10 L62 22 L62 46 L40 58 L18 46 L18 22 Z" /><circle cx="40" cy="34" r="12" />
+        <path d="M40 58 L40 70 M30 70 L50 70" />
+      </svg>
+    );
+    return (
+      <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth="3.2"><circle cx="40" cy="40" r="14" /><path d="M40 14v8M40 58v8M14 40h8M58 40h8M22 22l6 6M52 52l6 6M58 22l-6 6M28 52l-6 6" strokeLinecap="round" /></svg>
+    );
+  };
 
   const benefits = [
     { title: 'Same-Day Shipping', desc: 'Orders before 2pm CT ship today',
@@ -91,14 +108,18 @@ export default function Home() {
           <div className="categories-grid">
             {categories.map(cat => (
               <Link key={cat.id} to={`/catalog?category=${cat.slug}`} className="category-card">
-                <div className="category-icon">{catIcons[cat.slug] || '⚙️'}</div>
+                <div className="category-visual">
+                  <div className="category-visual-glow" />
+                  {cat.product_count != null && <span className="category-badge">{cat.product_count} products</span>}
+                  <div className="category-illu">{catIllustration(cat.slug)}</div>
+                </div>
                 <div className="category-card-body">
                   <h3>{cat.name}</h3>
-                  <p>{cat.description?.substring(0, 100)}</p>
-                </div>
-                <div className="category-card-foot">
-                  {cat.product_count != null && <span className="category-count">{cat.product_count} products</span>}
-                  <span className="text-link">Shop now</span>
+                  <p>{cat.description?.substring(0, 110)}</p>
+                  <span className="category-cta">
+                    Shop {cat.name}
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </span>
                 </div>
               </Link>
             ))}
