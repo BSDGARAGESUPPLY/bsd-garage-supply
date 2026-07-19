@@ -15,15 +15,17 @@ const STATUS_LABEL = {
 };
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, isApproved } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/orders').then(r => setOrders(r.data.slice(0, 5))).finally(() => setLoading(false));
-  }, [user]);
+    if (isApproved) api.get('/orders').then(r => setOrders(r.data.slice(0, 5))).finally(() => setLoading(false));
+    else setLoading(false);
+  }, [user, isApproved]);
 
-  const isApproved = true; // every signed-in account can order
+  const isPending = user && !isApproved;
+  const tierLabel = user?.price_tier === 'tech' ? 'Technician (trade pricing)' : user?.price_tier === 'client' ? 'Retail pricing' : null;
 
   return (
     <div className="dashboard-page">
@@ -35,12 +37,21 @@ export default function Dashboard() {
       </div>
 
       <div className="container dashboard-layout">
+        {isPending && (
+          <div className="alert alert-warning dashboard-pending" style={{ marginBottom: '24px' }}>
+            <span>⏳</span>
+            <div>
+              <strong>Your account is pending approval</strong>
+              <p>We review new accounts within 1 business day and will email you once you're approved and your pricing is set up. In the meantime you can <Link to="/catalog">browse the catalog</Link>.</p>
+            </div>
+          </div>
+        )}
         <div className="dashboard-grid">
           {/* Account Card */}
           <div className="card dashboard-card">
             <div className="card-header">
               <h3>Account Details</h3>
-              <span className="badge badge-success">Active</span>
+              <span className={`badge ${isApproved ? 'badge-success' : 'badge-warning'}`}>{isApproved ? 'Active' : 'Pending'}</span>
             </div>
             <div className="card-body account-details">
               <div className="account-row"><span>Company</span><strong>{user?.company_name}</strong></div>
@@ -48,6 +59,7 @@ export default function Dashboard() {
               <div className="account-row"><span>Email</span><strong>{user?.email}</strong></div>
               <div className="account-row"><span>Phone</span><strong>{user?.phone}</strong></div>
               <div className="account-row"><span>Business Type</span><strong>{user?.business_type || '—'}</strong></div>
+              {tierLabel && <div className="account-row"><span>Pricing</span><strong>{tierLabel}</strong></div>}
               {user?.city && <div className="account-row"><span>Location</span><strong>{user?.city}, {user?.state} {user?.zip}</strong></div>}
             </div>
           </div>

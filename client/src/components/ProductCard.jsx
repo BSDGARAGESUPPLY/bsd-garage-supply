@@ -25,7 +25,8 @@ function specChips(specs, isPair) {
 }
 
 export default function ProductCard({ product }) {
-  const { isApproved } = useAuth();
+  const { isApproved, user } = useAuth();
+  const pending = user && !isApproved;
   const { addToCart } = useCart();
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
@@ -83,6 +84,8 @@ export default function ProductCard({ product }) {
         <div className="product-card-pricing">
           {isApproved ? (
             <span className="product-price">{fmt(product.price)}</span>
+          ) : pending ? (
+            <span className="product-signin-price">⏳ Pending approval</span>
           ) : (
             <span className="product-signin-price">Sign in to see pricing</span>
           )}
@@ -102,6 +105,8 @@ export default function ProductCard({ product }) {
               {added ? '✓ Added!' : inStock ? 'Add to Cart' : 'Out of Stock'}
             </button>
           )
+        ) : pending ? (
+          <span className="btn btn-secondary btn-sm btn-full product-atc">Awaiting approval</span>
         ) : (
           <span className="btn btn-outline btn-sm btn-full product-atc">Sign in to buy</span>
         )}

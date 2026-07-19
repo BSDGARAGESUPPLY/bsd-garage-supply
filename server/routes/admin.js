@@ -39,14 +39,15 @@ router.get('/products', (req, res) => {
 
 router.post('/products', (req, res) => {
   const { category_id, name, sku, description, weight, stock_qty, min_stock_alert, specifications, images } = req.body;
-  // Single price model: accept `price` (fall back to legacy fields).
-  const price = req.body.price ?? req.body.retail_price ?? req.body.wholesale_price;
-  if (!name || !sku || price == null || price === '') return res.status(400).json({ error: 'Missing required fields (name, SKU, price)' });
+  // Two tiers: tech_price → wholesale, retail_price → client. Fall back to legacy `price`.
+  const tech = req.body.tech_price ?? req.body.wholesale_price ?? req.body.price;
+  const retail = req.body.retail_price ?? req.body.price ?? tech;
+  if (!name || !sku || tech == null || tech === '' || retail == null || retail === '') return res.status(400).json({ error: 'Missing required fields (name, SKU, tech & retail price)' });
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
   const result = db.prepare(`
     INSERT INTO products (category_id,name,slug,sku,description,retail_price,wholesale_price,weight,stock_qty,min_stock_alert,specifications,images)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-  `).run(category_id || null, name, slug, sku, description || null, price, price, weight||0, stock_qty||0, min_stock_alert||10,
+  `).run(category_id || null, name, slug, sku, description || null, retail, tech, weight||0, stock_qty||0, min_stock_alert||10,
     JSON.stringify(specifications||{}), JSON.stringify(images||[]));
   const product = db.prepare('SELECT * FROM products WHERE id=?').get(result.lastInsertRowid);
   res.status(201).json({ ...product, specifications: JSON.parse(product.specifications), images: JSON.parse(product.images) });
@@ -54,11 +55,12 @@ router.post('/products', (req, res) => {
 
 router.put('/products/:id', (req, res) => {
   const { category_id, name, sku, description, weight, stock_qty, min_stock_alert, specifications, images, is_active } = req.body;
-  const price = req.body.price ?? req.body.retail_price ?? req.body.wholesale_price;
+  const tech = req.body.tech_price ?? req.body.wholesale_price ?? req.body.price;
+  const retail = req.body.retail_price ?? req.body.price ?? tech;
   db.prepare(`
     UPDATE products SET category_id=?,name=?,sku=?,description=?,retail_price=?,wholesale_price=?,
     weight=?,stock_qty=?,min_stock_alert=?,specifications=?,images=?,is_active=? WHERE id=?
-  `).run(category_id || null, name, sku, description || null, price, price, weight||0, stock_qty||0, min_stock_alert||10,
+  `).run(category_id || null, name, sku, description || null, retail, tech, weight||0, stock_qty||0, min_stock_alert||10,
     JSON.stringify(specifications||{}), JSON.stringify(images||[]), is_active ?? 1, req.params.id);
   const product = db.prepare('SELECT * FROM products WHERE id=?').get(req.params.id);
   res.json({ ...product, specifications: JSON.parse(product.specifications), images: JSON.parse(product.images) });
@@ -97,7 +99,7 @@ router.put('/categories/:id', (req, res) => {
 router.get('/customers', (req, res) => {
   const { status, page = 1 } = req.query;
   const offset = (parseInt(page) - 1) * 50;
-  let q = `SELECT id,email,company_name,contact_name,phone,city,state,business_type,status,created_at,approved_at FROM users WHERE is_admin=0`;
+  let q = `SELECT id,email,company_name,contact_name,phone,city,state,business_type,status,price_tier,created_at,approved_at FROM users WHERE is_admin=0`;
   const params = [];
   if (status) { q += ' AND status=?'; params.push(status); }
   const total = db.prepare(`SELECT COUNT(*) as c FROM (${q})`).get(...params).c;
@@ -107,15 +109,28 @@ router.get('/customers', (req, res) => {
 });
 
 router.put('/customers/:id/status', (req, res) => {
-  const { status, notes } = req.body;
+  const { status, notes, price_tier } = req.body;
   if (!['approved','rejected','pending'].includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  if (status === 'approved' && !['tech','client'].includes(price_tier)) {
+    return res.status(400).json({ error: 'Choose a pricing tier (Technician or Retail Client) when approving.' });
+  }
   const approved_at = status === 'approved' ? new Date().toISOString() : null;
-  db.prepare('UPDATE users SET status=?, notes=?, approved_at=? WHERE id=?').run(status, notes || null, approved_at, req.params.id);
-  res.json(db.prepare('SELECT id,email,company_name,status,approved_at FROM users WHERE id=?').get(req.params.id));
+  const tier = status === 'approved' ? price_tier : null;
+  db.prepare('UPDATE users SET status=?, price_tier=?, notes=?, approved_at=? WHERE id=?').run(status, tier, notes || null, approved_at, req.params.id);
+
+  // Email the customer when their account is approved.
+  if (status === 'approved') {
+    const cust = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
+    if (cust?.email) {
+      const t = templates.accountApproved(cust);
+      sendMail({ to: cust.email, subject: t.subject, html: t.html });
+    }
+  }
+  res.json(db.prepare('SELECT id,email,company_name,status,price_tier,approved_at FROM users WHERE id=?').get(req.params.id));
 });
 
 router.get('/customers/:id', (req, res) => {
-  const user = db.prepare('SELECT id,email,company_name,contact_name,phone,address,city,state,zip,business_type,status,created_at,approved_at,notes FROM users WHERE id=?').get(req.params.id);
+  const user = db.prepare('SELECT id,email,company_name,contact_name,phone,address,city,state,zip,business_type,status,price_tier,created_at,approved_at,notes FROM users WHERE id=?').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'Not found' });
   const orders = db.prepare('SELECT id,order_number,status,total,created_at FROM orders WHERE user_id=? ORDER BY created_at DESC').all(req.params.id);
   res.json({ ...user, orders });

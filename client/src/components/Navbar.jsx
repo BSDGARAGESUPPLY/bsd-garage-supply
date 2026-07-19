@@ -83,7 +83,7 @@ export default function Navbar() {
             ) : (
               <div className="auth-btns">
                 <Link to="/login" className="btn btn-outline btn-sm">Sign In</Link>
-                <Link to="/register" className="btn btn-primary btn-sm">Create Account</Link>
+                <Link to="/register" className="btn btn-primary btn-sm">Apply for Account</Link>
               </div>
             )}
 

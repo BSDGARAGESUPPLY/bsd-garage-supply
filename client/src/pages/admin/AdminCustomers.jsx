@@ -20,16 +20,20 @@ export default function AdminCustomers() {
 
   useEffect(fetchCustomers, [status]);
 
-  const handleStatus = async (id, newStatus) => {
+  const handleStatus = async (id, newStatus, price_tier) => {
     setActionLoading(true);
     try {
-      await api.put(`/admin/customers/${id}/status`, { status: newStatus, notes });
+      await api.put(`/admin/customers/${id}/status`, { status: newStatus, notes, price_tier });
       setSelected(null);
       fetchCustomers();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not update the account.');
     } finally {
       setActionLoading(false);
     }
   };
+
+  const tierBadge = (t) => t === 'tech' ? '🔧 Tech' : t === 'client' ? '🛒 Retail' : null;
 
   const openCustomer = async (id) => {
     const { data: customer } = await api.get(`/admin/customers/${id}`);
@@ -88,7 +92,10 @@ export default function AdminCustomers() {
                     <td style={{fontSize:'13px'}}>{c.business_type || '—'}</td>
                     <td style={{fontSize:'13px'}}>{c.city && c.state ? `${c.city}, ${c.state}` : '—'}</td>
                     <td style={{fontSize:'13px', color:'var(--text-secondary)'}}>{new Date(c.created_at).toLocaleDateString()}</td>
-                    <td><span className={`badge status-${c.status}`}>{c.status}</span></td>
+                    <td>
+                      <span className={`badge status-${c.status}`}>{c.status}</span>
+                      {c.price_tier && <div style={{fontSize:'11px', color:'var(--text-secondary)', marginTop:'4px'}}>{tierBadge(c.price_tier)}</div>}
+                    </td>
                     <td>
                       <div style={{display:'flex', gap:'6px'}}>
                         <button className="btn btn-outline btn-sm" onClick={() => openCustomer(c.id)}>Review</button>
@@ -112,7 +119,7 @@ export default function AdminCustomers() {
             </div>
             <div className="modal-body">
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px', marginBottom:'20px'}}>
-                {[['Contact', selected.contact_name], ['Email', selected.email], ['Phone', selected.phone], ['Business Type', selected.business_type], ['Address', `${selected.address || ''} ${selected.city || ''} ${selected.state || ''} ${selected.zip || ''}`], ['Applied', new Date(selected.created_at).toLocaleString()], ['Status', selected.status.toUpperCase()]].map(([k, v]) => v && (
+                {[['Contact', selected.contact_name], ['Email', selected.email], ['Phone', selected.phone], ['Business Type', selected.business_type], ['Address', `${selected.address || ''} ${selected.city || ''} ${selected.state || ''} ${selected.zip || ''}`], ['Applied', new Date(selected.created_at).toLocaleString()], ['Status', selected.status.toUpperCase()], ['Pricing Tier', tierBadge(selected.price_tier)]].map(([k, v]) => v && (
                   <div key={k}>
                     <div style={{fontSize:'11px', fontWeight:700, textTransform:'uppercase', color:'var(--text-secondary)', marginBottom:'3px'}}>{k}</div>
                     <div style={{fontSize:'14px', fontWeight: k === 'Status' ? 700 : 400}}>{v}</div>
@@ -141,16 +148,14 @@ export default function AdminCustomers() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-danger" style={{marginRight:'auto'}} onClick={() => handleDelete(selected.id, selected.company_name)} disabled={actionLoading}>Remove Customer</button>
-              {selected.status !== 'rejected' && (
-                <button className="btn btn-outline" onClick={() => handleStatus(selected.id, 'rejected')} disabled={actionLoading}>Reject</button>
-              )}
-              {selected.status !== 'approved' && (
-                <button className={`btn btn-primary ${actionLoading ? 'btn-loading' : ''}`} onClick={() => handleStatus(selected.id, 'approved')} disabled={actionLoading}>
-                  Approve Wholesale Account
-                </button>
-              )}
-              {selected.status === 'approved' && (
-                <button className="btn btn-outline" onClick={() => handleStatus(selected.id, 'pending')} disabled={actionLoading}>Revoke Approval</button>
+              {selected.status === 'approved' ? (
+                <button className="btn btn-outline" onClick={() => handleStatus(selected.id, 'pending')} disabled={actionLoading}>Revoke Access</button>
+              ) : (
+                <>
+                  <button className="btn btn-outline" onClick={() => handleStatus(selected.id, 'rejected')} disabled={actionLoading}>Reject</button>
+                  <button className="btn btn-secondary" onClick={() => handleStatus(selected.id, 'approved', 'client')} disabled={actionLoading}>Approve · 🛒 Retail</button>
+                  <button className={`btn btn-primary ${actionLoading ? 'btn-loading' : ''}`} onClick={() => handleStatus(selected.id, 'approved', 'tech')} disabled={actionLoading}>Approve · 🔧 Technician</button>
+                </>
               )}
             </div>
           </div>

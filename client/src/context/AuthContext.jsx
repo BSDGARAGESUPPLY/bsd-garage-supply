@@ -33,12 +33,9 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (form) => {
+    // Approval model: account starts pending — no auto-login. Returns { user, message }.
     const { data } = await api.post('/auth/register', form);
-    // Open-account model: registration returns a token, log them in immediately.
-    localStorage.setItem('token', data.token);
-    api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-    setUser(data.user);
-    return data.user;
+    return data;
   };
 
   const logout = () => {
@@ -54,7 +51,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, isAdmin: user?.is_admin === 1, isApproved: !!user }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, isAdmin: user?.is_admin === 1, isApproved: user?.status === 'approved' || user?.is_admin === 1 }}>
       {children}
     </AuthContext.Provider>
   );

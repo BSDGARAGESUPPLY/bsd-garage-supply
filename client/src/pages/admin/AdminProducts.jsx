@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../../api';
 import ImageUploader from '../../components/ImageUploader';
 
-const EMPTY = { category_id: '', name: '', sku: '', description: '', price: '', weight: '', stock_qty: '', min_stock_alert: 10, specifications: '{}', images: [], is_active: 1 };
+const EMPTY = { category_id: '', name: '', sku: '', description: '', tech_price: '', retail_price: '', weight: '', stock_qty: '', min_stock_alert: 10, specifications: '{}', images: [], is_active: 1 };
 
 export default function AdminProducts() {
   const [data, setData] = useState({ products: [], total: 0 });
@@ -31,7 +31,8 @@ export default function AdminProducts() {
     setEditing(p);
     setForm({
       ...p,
-      price: p.price ?? p.retail_price ?? '',
+      tech_price: p.wholesale_price ?? '',
+      retail_price: p.retail_price ?? '',
       specifications: typeof p.specifications === 'object' ? JSON.stringify(p.specifications, null, 2) : p.specifications,
       images: Array.isArray(p.images) ? p.images : (p.images ? JSON.parse(p.images) : [])
     });
@@ -91,7 +92,7 @@ export default function AdminProducts() {
           {loading ? <div className="loading-center"><div className="spinner" /></div> : (
             <table>
               <thead>
-                <tr><th>Product</th><th>SKU</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr>
+                <tr><th>Product</th><th>SKU</th><th>Category</th><th>Tech</th><th>Retail</th><th>Stock</th><th>Status</th><th></th></tr>
               </thead>
               <tbody>
                 {data.products.map(p => (
@@ -99,7 +100,8 @@ export default function AdminProducts() {
                     <td><strong style={{fontSize:'13px'}}>{p.name}</strong></td>
                     <td style={{fontFamily:'monospace', fontSize:'12px'}}>{p.sku}</td>
                     <td style={{fontSize:'13px'}}>{p.category_name || '—'}</td>
-                    <td style={{color:'var(--gold)', fontWeight:600}}>${Number(p.price ?? p.retail_price).toFixed(2)}</td>
+                    <td style={{color:'var(--gold-dark)', fontWeight:700}}>${Number(p.wholesale_price).toFixed(2)}</td>
+                    <td style={{color:'var(--text-secondary)'}}>${Number(p.retail_price).toFixed(2)}</td>
                     <td>
                       <span style={{color: p.stock_qty === 0 ? 'var(--error)' : p.stock_qty <= p.min_stock_alert ? 'var(--warning)' : 'var(--success)', fontWeight:600}}>
                         {p.stock_qty}
@@ -178,8 +180,20 @@ export default function AdminProducts() {
 
                 <div className="form-section">
                   <div className="form-section-title">Pricing & Inventory</div>
-                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:'12px'}}>
-                    {[['price','Price ($)'],['weight','Weight (lbs)'],['stock_qty','Stock Qty'],['min_stock_alert','Min Alert']].map(([f, label]) => (
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'12px'}}>
+                    <div className="form-group">
+                      <label className="form-label required">🔧 Tech Price ($)</label>
+                      <input className="form-input" type="number" step="0.01" min="0" value={form.tech_price} onChange={set('tech_price')} />
+                      <span className="form-hint">Trade / technician pricing</span>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label required">🛒 Retail Price ($)</label>
+                      <input className="form-input" type="number" step="0.01" min="0" value={form.retail_price} onChange={set('retail_price')} />
+                      <span className="form-hint">Retail client pricing</span>
+                    </div>
+                  </div>
+                  <div style={{display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px'}}>
+                    {[['weight','Weight (lbs)'],['stock_qty','Stock Qty'],['min_stock_alert','Min Alert']].map(([f, label]) => (
                       <div key={f} className="form-group">
                         <label className="form-label">{label}</label>
                         <input className="form-input" type="number" step="0.01" min="0" value={form[f]} onChange={set(f)} />

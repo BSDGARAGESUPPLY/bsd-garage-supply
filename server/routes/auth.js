@@ -22,22 +22,22 @@ router.post('/register', async (req, res) => {
   if (existing) return res.status(409).json({ error: 'Email already registered' });
 
   const hash = await bcrypt.hash(password, 12);
-  // Open-account model: every new account is active immediately.
+  // Approval model: new accounts start pending until the owner approves + sets a pricing tier.
   const insert = db.prepare(`
-    INSERT INTO users (email, password_hash, company_name, contact_name, phone, address, city, state, zip, business_type, status, approved_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', datetime('now'))
+    INSERT INTO users (email, password_hash, company_name, contact_name, phone, address, city, state, zip, business_type, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
   `);
   const result = insert.run(email.toLowerCase(), hash, company_name, contact_name, phone,
     address || null, city || null, state || null, zip || null, business_type || null);
   const full = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
   const { password_hash, ...user } = full;
-  // Log them in right away so they can shop immediately.
-  const token = signToken(user.id);
-  res.status(201).json({ token, user, message: 'Account created' });
 
-  // Fire-and-forget welcome email (never blocks or breaks the response).
-  const { subject, html } = templates.welcome(user);
-  sendMail({ to: user.email, subject, html });
+  res.status(201).json({ user, message: 'Application received. We review new accounts within 1 business day.' });
+
+  // Notify the owner that an account is awaiting approval (fire-and-forget).
+  const { ADMIN_EMAIL } = require('../lib/mailer');
+  const alert = templates.newAccountPending(user);
+  sendMail({ to: ADMIN_EMAIL, subject: alert.subject, html: alert.html });
 });
 
 router.post('/login', async (req, res) => {

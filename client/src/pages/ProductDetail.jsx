@@ -15,7 +15,8 @@ export default function ProductDetail() {
   const [qty, setQty] = useState(1);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
-  const { isApproved } = useAuth();
+  const { isApproved, user } = useAuth();
+  const pending = user && !isApproved;
   const { addToCart } = useCart();
   const navigate = useNavigate();
 
@@ -113,10 +114,15 @@ export default function ProductDetail() {
             <div className="pd-pricing">
               {isApproved ? (
                 <div className="pd-price-main">{fmt(displayPrice)}</div>
+              ) : pending ? (
+                <div className="pd-wholesale-teaser">
+                  <span>⏳</span>
+                  <span>Your account is <strong>pending approval</strong>. We'll email you once it's active and your pricing is set up.</span>
+                </div>
               ) : (
                 <div className="pd-wholesale-teaser">
                   <span>🔒</span>
-                  <span>Pricing is available to account holders — <Link to="/login">sign in</Link> or <Link to="/register">create a free account</Link> to see prices and order.</span>
+                  <span>Pricing is available to approved account holders — <Link to="/login">sign in</Link> or <Link to="/register">apply for an account</Link>.</span>
                 </div>
               )}
             </div>
@@ -168,9 +174,9 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {!isApproved && (
+            {!user && (
               <div className="pd-login-cta">
-                <Link to="/register" className="btn btn-primary btn-lg btn-full">Create a Free Account</Link>
+                <Link to="/register" className="btn btn-primary btn-lg btn-full">Apply for an Account</Link>
                 <Link to="/login" className="btn btn-outline btn-lg btn-full" style={{marginTop: '8px'}}>Sign In</Link>
               </div>
             )}

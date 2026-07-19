@@ -25,6 +25,7 @@ db.exec(`
     country TEXT DEFAULT 'US',
     business_type TEXT,
     status TEXT DEFAULT 'pending',
+    price_tier TEXT,
     is_admin INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     approved_at TEXT,
@@ -111,6 +112,28 @@ db.exec(`
     used INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT);
 `);
+
+// ── Migrations for existing databases ──────────────────────────────────────
+// Add price_tier column if it's missing (older DBs).
+try { db.exec("ALTER TABLE users ADD COLUMN price_tier TEXT"); } catch { /* already exists */ }
+
+// Run-once helper.
+function once(key, fn) {
+  const done = db.prepare('SELECT 1 FROM _meta WHERE key = ?').get(key);
+  if (!done) {
+    fn();
+    db.prepare("INSERT INTO _meta (key, value) VALUES (?, datetime('now'))").run(key);
+  }
+}
+
+// Split the single price into two tiers: today's price = Tech (wholesale),
+// Retail (client) = Tech × 9. Runs exactly once.
+once('split_price_tiers_x9', () => {
+  db.exec('UPDATE products SET retail_price = ROUND(wholesale_price * 9, 2)');
+  console.log('💰 Migrated prices: Retail = Tech × 9');
+});
 
 module.exports = db;

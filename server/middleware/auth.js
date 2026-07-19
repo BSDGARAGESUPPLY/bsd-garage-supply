@@ -18,9 +18,13 @@ const authenticate = (req, res, next) => {
   }
 };
 
-// In the open-account model, any authenticated user may purchase.
-// Kept as a pass-through so existing route signatures stay intact.
-const requireApproved = (req, res, next) => next();
+// Only approved accounts may add to cart / order.
+const requireApproved = (req, res, next) => {
+  if (req.user.status !== 'approved' && !req.user.is_admin) {
+    return res.status(403).json({ error: 'Your account is pending approval. We\'ll email you once it\'s active.' });
+  }
+  next();
+};
 
 const requireAdmin = (req, res, next) => {
   if (!req.user.is_admin) {

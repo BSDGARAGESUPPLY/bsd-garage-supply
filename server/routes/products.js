@@ -16,15 +16,20 @@ const optionalAuth = (req, res, next) => {
 };
 
 const formatProduct = (product, user) => {
-  const loggedIn = !!user;
+  const approved = user && (user.status === 'approved' || user.is_admin);
+  // Tier: 'tech' → wholesale price, 'client' → retail price. Admins see tech pricing.
+  const tier = approved ? (user.price_tier || (user.is_admin ? 'tech' : 'client')) : null;
   const { retail_price, wholesale_price, ...rest } = product;
+  let price = null;
+  if (approved) price = tier === 'tech' ? product.wholesale_price : product.retail_price;
   return {
     ...rest,
     specifications: JSON.parse(product.specifications || '{}'),
     images: JSON.parse(product.images || '[]'),
-    // Single price, only revealed to signed-in account holders
-    price: loggedIn ? product.retail_price : null,
-    requires_login: !loggedIn
+    price,
+    price_tier: tier,
+    requires_login: !user,        // not logged in
+    pending: !!user && !approved  // logged in but awaiting approval
   };
 };
 

@@ -2,15 +2,18 @@ const router = require('express').Router();
 const db = require('../db');
 const { authenticate, requireApproved } = require('../middleware/auth');
 
-const getCart = (userId) => {
+// Price column depends on the user's tier: tech → wholesale, client → retail.
+const priceColFor = (user) => ((user.price_tier || (user.is_admin ? 'tech' : 'client')) === 'tech' ? 'p.wholesale_price' : 'p.retail_price');
+
+const getCart = (user) => {
   return db.prepare(`
     SELECT ci.id, ci.quantity, ci.product_id,
-      p.name, p.sku, p.retail_price as unit_price, p.stock_qty, p.weight,
+      p.name, p.sku, ${priceColFor(user)} as unit_price, p.stock_qty, p.weight,
       p.images
     FROM cart_items ci
     JOIN products p ON ci.product_id = p.id
     WHERE ci.user_id = ? AND p.is_active = 1
-  `).all(userId).map(item => ({
+  `).all(user.id).map(item => ({
     ...item,
     images: JSON.parse(item.images || '[]'),
     total_price: item.unit_price * item.quantity
@@ -18,7 +21,7 @@ const getCart = (userId) => {
 };
 
 router.get('/', authenticate, requireApproved, (req, res) => {
-  const items = getCart(req.user.id);
+  const items = getCart(req.user);
   const subtotal = items.reduce((sum, i) => sum + i.total_price, 0);
   res.json({ items, subtotal, item_count: items.reduce((sum, i) => sum + i.quantity, 0) });
 });
@@ -36,7 +39,7 @@ router.post('/', authenticate, requireApproved, (req, res) => {
     ON CONFLICT(user_id, product_id) DO UPDATE SET quantity = quantity + excluded.quantity
   `).run(req.user.id, product_id, quantity);
 
-  const items = getCart(req.user.id);
+  const items = getCart(req.user);
   res.json({ items, subtotal: items.reduce((sum, i) => sum + i.total_price, 0) });
 });
 
@@ -47,13 +50,13 @@ router.put('/:id', authenticate, requireApproved, (req, res) => {
   } else {
     db.prepare('UPDATE cart_items SET quantity=? WHERE id=? AND user_id=?').run(quantity, req.params.id, req.user.id);
   }
-  const items = getCart(req.user.id);
+  const items = getCart(req.user);
   res.json({ items, subtotal: items.reduce((sum, i) => sum + i.total_price, 0) });
 });
 
 router.delete('/:id', authenticate, requireApproved, (req, res) => {
   db.prepare('DELETE FROM cart_items WHERE id=? AND user_id=?').run(req.params.id, req.user.id);
-  const items = getCart(req.user.id);
+  const items = getCart(req.user);
   res.json({ items, subtotal: items.reduce((sum, i) => sum + i.total_price, 0) });
 });
 

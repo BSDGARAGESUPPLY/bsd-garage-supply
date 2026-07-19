@@ -17,8 +17,10 @@ router.post('/', authenticate, requireApproved, (req, res) => {
     return res.status(400).json({ error: 'Shipping information required' });
   }
 
+  // Charge the buyer's tier price: tech → wholesale, client → retail.
+  const priceCol = (req.user.price_tier || (req.user.is_admin ? 'tech' : 'client')) === 'tech' ? 'p.wholesale_price' : 'p.retail_price';
   const cartItems = db.prepare(`
-    SELECT ci.quantity, p.id as product_id, p.name, p.sku, p.retail_price as price, p.stock_qty
+    SELECT ci.quantity, p.id as product_id, p.name, p.sku, ${priceCol} as price, p.stock_qty
     FROM cart_items ci JOIN products p ON ci.product_id = p.id
     WHERE ci.user_id = ? AND p.is_active = 1
   `).all(req.user.id);

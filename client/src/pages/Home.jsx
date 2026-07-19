@@ -75,7 +75,7 @@ export default function Home() {
           </form>
           <div className="hero-ctas">
             <Link to="/catalog" className="btn btn-primary btn-lg">Browse the Catalog</Link>
-            <Link to="/register" className="btn btn-outline-white btn-lg">Create a Free Account</Link>
+            <Link to="/register" className="btn btn-outline-white btn-lg">Apply for an Account</Link>
           </div>
         </div>
       </section>
@@ -159,24 +159,24 @@ export default function Home() {
         <div className="container">
           <div className="account-cta">
             <div className="account-cta-content">
-              <div className="account-cta-badge">Free Account</div>
-              <h2>See pricing &amp; order online</h2>
-              <p>Create a free account to unlock live pricing on our full catalog, order online, and track every shipment. No approval, no waiting.</p>
+              <div className="account-cta-badge">Trade &amp; Retail Accounts</div>
+              <h2>Get pricing built for you</h2>
+              <p>Apply for an account and we'll set you up with the right pricing — <strong>trade pricing for technicians</strong>, retail for everyone else. Most accounts are approved within 1 business day.</p>
               <ul className="account-benefits">
-                <li>Live pricing on every product</li>
+                <li>Pricing matched to your account type</li>
                 <li>Online ordering with real-time stock</li>
                 <li>Order tracking &amp; fast reordering</li>
               </ul>
               <div className="flex gap-12" style={{ marginTop: '28px', flexWrap: 'wrap' }}>
-                <Link to="/register" className="btn btn-primary btn-lg">Create Free Account</Link>
+                <Link to="/register" className="btn btn-primary btn-lg">Apply for an Account</Link>
                 <Link to="/login" className="btn btn-outline btn-lg">Sign In</Link>
               </div>
             </div>
             <div className="account-steps">
               {[
-                { n: '1', title: 'Create account', desc: 'Free, under 2 minutes' },
-                { n: '2', title: 'See pricing', desc: 'Across the full catalog' },
-                { n: '3', title: 'Order & track', desc: 'Ship or pick up' },
+                { n: '1', title: 'Apply', desc: 'Quick 2-step form' },
+                { n: '2', title: 'Get approved', desc: 'Within 1 business day' },
+                { n: '3', title: 'See pricing & order', desc: 'Ship or pick up' },
               ].map(s => (
                 <div key={s.n} className="account-step">
                   <div className="account-step-num">{s.n}</div>

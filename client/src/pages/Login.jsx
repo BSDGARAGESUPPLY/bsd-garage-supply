@@ -59,7 +59,7 @@ export default function Login() {
         </form>
 
         <div className="auth-divider"><span>New to BSD Garage Supply?</span></div>
-        <Link to="/register" className="btn btn-outline btn-full">Create a Free Account</Link>
+        <Link to="/register" className="btn btn-outline btn-full">Apply for an Account</Link>
       </div>
     </div>
   );

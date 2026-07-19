@@ -7,11 +7,11 @@ const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','
 const BUSINESS_TYPES = ['Garage Door Contractor','Garage Door Dealer','Garage Door Repair Service','Property Management Company','General Contractor','Handyman Service','Other'];
 
 export default function Register() {
-  const navigate = useNavigate();
   const { register } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
     email: '', password: '', confirm_password: '', company_name: '', contact_name: '',
     phone: '', address: '', city: '', state: '', zip: '', business_type: ''
@@ -33,14 +33,30 @@ export default function Register() {
     setError('');
     try {
       await register(form);
-      // Logged in automatically — go straight to shopping.
-      navigate('/catalog');
+      setSubmitted(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
+
+  if (submitted) {
+    return (
+      <div className="auth-page">
+        <div className="auth-card card" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '10px' }}>📨</div>
+          <h1>Application received!</h1>
+          <p className="auth-subtitle">
+            Thanks, {form.contact_name || 'there'}. We review new accounts within <strong>1 business day</strong> and
+            will email <strong>{form.email}</strong> once you're approved and your pricing is set up.
+          </p>
+          <Link to="/" className="btn btn-primary btn-full btn-lg" style={{ marginTop: '20px' }}>Back to Home</Link>
+          <p className="auth-footer-text">Meanwhile, you can <Link to="/catalog">browse the catalog</Link>.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="auth-page auth-page-wide">
@@ -50,8 +66,8 @@ export default function Register() {
             onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='block'; }} />
           <div className="auth-logo-fallback" style={{display:'none'}}>BSD Garage Supply</div>
         </div>
-        <h1>Create Your Account</h1>
-        <p className="auth-subtitle">Free to join — see pricing and order in minutes</p>
+        <h1>Apply for an Account</h1>
+        <p className="auth-subtitle">We review new accounts within 1 business day</p>
 
         <div className="auth-steps">
           <div className={`auth-step ${step >= 1 ? 'active' : ''}`}><span>1</span> Login Info</div>
@@ -128,13 +144,13 @@ export default function Register() {
               </div>
             </div>
             <div className="alert alert-info">
-              <span>✓</span>
-              <span>Your account is active immediately. Once you finish, you'll be signed in and can see pricing and place orders right away.</span>
+              <span>ℹ️</span>
+              <span>We review each account and set up your pricing based on whether you're a technician/trade or a retail customer. You'll get an email once you're approved — usually within 1 business day.</span>
             </div>
             <div className="auth-form-btns">
               <button type="button" className="btn btn-outline" onClick={() => setStep(1)}>← Back</button>
               <button type="submit" className={`btn btn-primary btn-lg ${loading ? 'btn-loading' : ''}`} disabled={loading}>
-                Create Account
+                Submit Application
               </button>
             </div>
           </form>

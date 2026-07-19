@@ -160,4 +160,35 @@ function contactMessage({ name, email, phone, subject, message }) {
   return { subject: `Contact form: ${subject || 'New message'} — from ${name}`, html: layout('Contact message', body) };
 }
 
-module.exports = { welcome, orderConfirmation, newOrderAdmin, orderShipped, passwordReset, contactMessage };
+// ── New account pending approval (to owner) ──────────────────────────────────
+function newAccountPending(user) {
+  const body = `
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;">🔔 New account needs approval</h1>
+    <p style="margin:0 0 18px;font-size:15px;color:#444;">Someone signed up and is waiting for you to approve them and set their pricing tier.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+      <tr><td style="padding:6px 0;color:#888;width:120px;">Company</td><td style="padding:6px 0;"><strong>${user.company_name || '—'}</strong></td></tr>
+      <tr><td style="padding:6px 0;color:#888;">Contact</td><td style="padding:6px 0;">${user.contact_name || '—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;">Email</td><td style="padding:6px 0;"><a href="mailto:${user.email}" style="color:${GOLD};">${user.email}</a></td></tr>
+      <tr><td style="padding:6px 0;color:#888;">Phone</td><td style="padding:6px 0;">${user.phone || '—'}</td></tr>
+      <tr><td style="padding:6px 0;color:#888;">Business type</td><td style="padding:6px 0;">${user.business_type || '—'}</td></tr>
+    </table>
+    <p style="margin:16px 0 0;font-size:14px;color:#444;">Approve them as a <strong>Technician</strong> (trade pricing) or <strong>Retail Client</strong> (retail pricing).</p>
+    ${button('Review in Admin', SITE_URL + '/admin/customers')}`;
+  return { subject: `New account to approve — ${user.company_name || user.email}`, html: layout('New account', body) };
+}
+
+// ── Account approved (to customer) ───────────────────────────────────────────
+function accountApproved(user) {
+  const tierLabel = user.price_tier === 'tech' ? 'Technician / trade pricing' : 'Retail pricing';
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:23px;font-weight:700;">You're approved! ✅</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#444;">
+      Your BSD Garage Supply account is active. You've been set up with <strong>${tierLabel}</strong>.
+      Sign in to see pricing across our full catalog and place your orders online.
+    </p>
+    ${button('Sign In & Shop', SITE_URL + '/login')}
+    <p style="margin:16px 0 0;font-size:13px;color:#888;">Account: <strong>${user.email}</strong></p>`;
+  return { subject: 'Your BSD Garage Supply account is approved', html: layout('Approved', body) };
+}
+
+module.exports = { welcome, orderConfirmation, newOrderAdmin, orderShipped, passwordReset, contactMessage, newAccountPending, accountApproved };
