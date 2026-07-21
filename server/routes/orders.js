@@ -35,7 +35,10 @@ router.post('/', authenticate, requireApproved, (req, res) => {
 
   const subtotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const shippingCost = parseFloat(shipping_cost) || 0;
-  const total = parseFloat((subtotal + shippingCost).toFixed(2));
+  // Florida sales tax on the product subtotal. Rate is configurable via SALES_TAX_PERCENT.
+  const TAX_PERCENT = parseFloat(process.env.SALES_TAX_PERCENT || '6.5');
+  const tax = parseFloat((subtotal * TAX_PERCENT / 100).toFixed(2));
+  const total = parseFloat((subtotal + shippingCost + tax).toFixed(2));
   const orderNumber = generateOrderNumber();
 
   try {
@@ -45,7 +48,7 @@ router.post('/', authenticate, requireApproved, (req, res) => {
         shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip,
         shipping_method, notes)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(orderNumber, req.user.id, subtotal, shippingCost, 0, total,
+    `).run(orderNumber, req.user.id, subtotal, shippingCost, tax, total,
       shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip,
       shipping_method, notes || null);
 

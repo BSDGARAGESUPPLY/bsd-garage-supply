@@ -30,7 +30,8 @@ app.use('/api/auth/', authLimiter);
 // Served at runtime so it always reflects the current env var, no rebuild needed.
 app.get('/api/config', (req, res) => {
   res.json({
-    stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLIC_KEY || ''
+    stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLIC_KEY || '',
+    taxPercent: parseFloat(process.env.SALES_TAX_PERCENT || '6.5')
   });
 });
 

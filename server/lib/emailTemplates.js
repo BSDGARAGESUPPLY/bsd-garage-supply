@@ -85,6 +85,7 @@ function orderConfirmation(order, items) {
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:14px;">
       <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">${money(order.subtotal)}</td></tr>
       <tr><td style="padding:4px 0;color:#666;">Shipping</td><td style="padding:4px 0;text-align:right;">${money(order.shipping_cost)}</td></tr>
+      ${order.tax > 0 ? `<tr><td style="padding:4px 0;color:#666;">Sales Tax</td><td style="padding:4px 0;text-align:right;">${money(order.tax)}</td></tr>` : ''}
       <tr><td style="padding:8px 0;font-weight:800;font-size:16px;border-top:2px solid #eee;">Total</td>
           <td style="padding:8px 0;text-align:right;font-weight:800;font-size:16px;border-top:2px solid #eee;color:${GOLD};">${money(order.total)}</td></tr>
     </table>

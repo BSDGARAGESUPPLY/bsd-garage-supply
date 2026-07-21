@@ -29,10 +29,16 @@ function CheckoutForm() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [orderId, setOrderId] = useState(null);
+  const [taxPercent, setTaxPercent] = useState(0);
+
+  useEffect(() => { api.get('/config').then(r => setTaxPercent(r.data.taxPercent || 0)).catch(() => {}); }, []);
 
   const set = (f) => (e) => setShippingForm({...shippingForm, [f]: e.target.value});
 
   const totalWeight = cart.items.reduce((sum, i) => sum + (i.weight || 1) * i.quantity, 0);
+  const tax = cart.subtotal * (taxPercent / 100);
+  const shippingCost = selectedRate?.cost || 0;
+  const grandTotal = cart.subtotal + shippingCost + tax;
 
   const fetchRates = async (e) => {
     e.preventDefault();
@@ -120,7 +126,7 @@ function CheckoutForm() {
     );
   }
 
-  const total = cart.subtotal + (selectedRate?.cost || 0);
+  const total = grandTotal;
 
   return (
     <div className="checkout-layout">
@@ -282,9 +288,10 @@ function CheckoutForm() {
                 <span>Shipping</span>
                 <span>{selectedRate ? (selectedRate.cost === 0 ? 'FREE' : fmt(selectedRate.cost)) : '—'}</span>
               </div>
+              <div className="checkout-total-row"><span>Sales Tax (FL {taxPercent}%)</span><span>{fmt(tax)}</span></div>
               <div className="checkout-total-row checkout-total-main">
                 <span>Total</span>
-                <span>{fmt(cart.subtotal + (selectedRate?.cost || 0))}</span>
+                <span>{fmt(grandTotal)}</span>
               </div>
             </div>
           </div>
