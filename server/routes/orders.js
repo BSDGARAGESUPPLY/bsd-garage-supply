@@ -3,6 +3,12 @@ const db = require('../db');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { authenticate, requireApproved } = require('../middleware/auth');
 const { fulfillOrder } = require('../lib/fulfillment');
+const { sendMail, ADMIN_EMAIL } = require('../lib/mailer');
+const templates = require('../lib/emailTemplates');
+
+// Where offline payments go. Zelle recipient is configurable; pickup is fixed for now.
+const ZELLE_RECIPIENT = process.env.ZELLE_RECIPIENT || 'bsdgaragesupply@gmail.com';
+const PICKUP_ADDRESS = '2634 NE 9th Ave, Cape Coral, FL 33909';
 
 const generateOrderNumber = () => {
   const ts = Date.now().toString(36).toUpperCase();
@@ -10,12 +16,36 @@ const generateOrderNumber = () => {
   return `BSD-${ts}-${rand}`;
 };
 
-// Create order from cart
-router.post('/', authenticate, requireApproved, (req, res) => {
-  const { shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip, shipping_method, shipping_cost, notes } = req.body;
-  if (!shipping_name || !shipping_address || !shipping_city || !shipping_state || !shipping_zip || !shipping_method) {
-    return res.status(400).json({ error: 'Shipping information required' });
+// Send the "invoice + how to pay" email to the customer and an alert to the owner.
+// Used for Zelle / cash orders, which are placed unpaid and settled offline.
+function sendUnpaidOrderEmails(orderId) {
+  try {
+    const order = db.prepare(`
+      SELECT o.*, u.email AS customer_email, u.company_name, u.contact_name, u.phone
+      FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = ?
+    `).get(orderId);
+    if (!order) return;
+    const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId);
+    const inv = templates.orderInvoice(order, items, { zelleRecipient: ZELLE_RECIPIENT, pickupAddress: PICKUP_ADDRESS });
+    sendMail({ to: order.customer_email, subject: inv.subject, html: inv.html });
+    const customer = { company_name: order.company_name, contact_name: order.contact_name, email: order.customer_email, phone: order.phone };
+    const alert = templates.newOrderAdmin(order, items, customer);
+    sendMail({ to: ADMIN_EMAIL, subject: alert.subject, html: alert.html });
+  } catch (err) {
+    console.error('Invoice email error:', err.message);
   }
+}
+
+// Create order from cart. payment_method: 'card' (pay online now) | 'zelle' | 'cash'.
+// Zelle/cash orders are placed unpaid (stock reserved, cart cleared) and get an invoice.
+router.post('/', authenticate, requireApproved, (req, res) => {
+  const { payment_method, shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip, notes } = req.body;
+  const method = ['card', 'zelle', 'cash'].includes(payment_method) ? payment_method : 'card';
+
+  // Pickup-only for now — no shipping address is required. Fall back to the account name.
+  const name = shipping_name || req.user.company_name || req.user.contact_name || 'Pickup';
+  const shippingMethod = 'Local Pickup';
+  const shippingCost = 0;
 
   // Charge the buyer's tier price: tech → wholesale, client → retail.
   const priceCol = (req.user.price_tier || (req.user.is_admin ? 'tech' : 'client')) === 'tech' ? 'p.wholesale_price' : 'p.retail_price';
@@ -34,23 +64,25 @@ router.post('/', authenticate, requireApproved, (req, res) => {
   }
 
   const subtotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const shippingCost = parseFloat(shipping_cost) || 0;
   // Florida sales tax on the product subtotal. Rate is configurable via SALES_TAX_PERCENT.
   const TAX_PERCENT = parseFloat(process.env.SALES_TAX_PERCENT || '6.5');
   const tax = parseFloat((subtotal * TAX_PERCENT / 100).toFixed(2));
   const total = parseFloat((subtotal + shippingCost + tax).toFixed(2));
   const orderNumber = generateOrderNumber();
 
+  // Card is paid online after this step; Zelle/cash are placed unpaid and settled offline.
+  const paymentStatus = method === 'card' ? 'pending' : 'unpaid';
+
   try {
     db.exec('BEGIN');
     const orderResult = db.prepare(`
       INSERT INTO orders (order_number, user_id, subtotal, shipping_cost, tax, total,
         shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip,
-        shipping_method, notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        shipping_method, payment_method, payment_status, notes)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(orderNumber, req.user.id, subtotal, shippingCost, tax, total,
-      shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip,
-      shipping_method, notes || null);
+      name, shipping_address || null, shipping_city || null, shipping_state || null, shipping_zip || null,
+      shippingMethod, method, paymentStatus, notes || null);
 
     const orderId = orderResult.lastInsertRowid;
     for (const item of cartItems) {
@@ -59,8 +91,20 @@ router.post('/', authenticate, requireApproved, (req, res) => {
         VALUES (?,?,?,?,?,?,?)
       `).run(orderId, item.product_id, item.quantity, item.price, item.price * item.quantity, item.name, item.sku);
     }
+
+    // Zelle/cash: the order is placed now — reserve stock and empty the cart.
+    // (Card reserves stock only once payment succeeds, via fulfillOrder.)
+    if (method !== 'card') {
+      for (const item of cartItems) {
+        db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?').run(item.quantity, item.product_id);
+      }
+      db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(req.user.id);
+    }
     db.exec('COMMIT');
-    res.status(201).json({ order_id: orderId, order_number: orderNumber, total });
+
+    if (method !== 'card') sendUnpaidOrderEmails(orderId);
+
+    res.status(201).json({ order_id: orderId, order_number: orderNumber, total, payment_method: method });
   } catch (err) {
     db.exec('ROLLBACK');
     res.status(500).json({ error: err.message });

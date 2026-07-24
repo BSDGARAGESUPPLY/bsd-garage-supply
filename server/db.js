@@ -119,6 +119,8 @@ db.exec(`
 // ── Migrations for existing databases ──────────────────────────────────────
 // Add price_tier column if it's missing (older DBs).
 try { db.exec("ALTER TABLE users ADD COLUMN price_tier TEXT"); } catch { /* already exists */ }
+// Add payment_method column to orders (card | zelle | cash).
+try { db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'card'"); } catch { /* already exists */ }
 
 // Run-once helper.
 function once(key, fn) {

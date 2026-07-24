@@ -260,6 +260,16 @@ tbody tr:hover { background: #f8fafc; }
 .text-gold { color: var(--gold-dark); }
 .text-success { color: #157347; }
 
+/* Invoice payment highlight (Zelle recipient / pickup address) */
+.invoice-pay-highlight { margin: 8px 0; padding: 14px 18px; background: var(--gold-bg); border: 1px dashed var(--gold); border-radius: 8px; font-size: 18px; font-weight: 800; color: var(--gold-dark); text-align: center; word-break: break-word; }
+
+/* Print — hide chrome, single column, plain background (invoice printing) */
+@media print {
+  .no-print { display: none !important; }
+  .order-detail-grid { grid-template-columns: 1fr !important; }
+  body { background: #fff !important; }
+}
+
 .gold-line { width: 56px; height: 4px; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 2px; margin: 14px auto 0; }
 .gold-line-left { margin-left: 0; }
 

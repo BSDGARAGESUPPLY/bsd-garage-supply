@@ -8,253 +8,222 @@ import { useAuth } from '../context/AuthContext';
 import './Checkout.css';
 
 const fmt = (n) => `$${Number(n).toFixed(2)}`;
+const DEFAULT_ZELLE = 'bsdgaragesupply@gmail.com';
+const DEFAULT_PICKUP = '2634 NE 9th Ave, Cape Coral, FL 33909';
 
-const US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
-
-function CheckoutForm() {
+// Card payment — must render inside <Elements>. Creates the order, then charges it.
+function CardPaymentStep({ amount, onCreateOrder, onBack }) {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
-  const { cart, clearCart } = useCart();
+  const { clearCart } = useCart();
   const { user } = useAuth();
-
-  const [step, setStep] = useState(1); // 1=shipping, 2=shipping method, 3=payment
-  const [shippingForm, setShippingForm] = useState({
-    name: user?.contact_name || '', address: user?.address || '', city: user?.city || '',
-    state: user?.state || '', zip: user?.zip || '', country: 'US'
-  });
-  const [shippingRates, setShippingRates] = useState([]);
-  const [selectedRate, setSelectedRate] = useState(null);
-  const [loadingRates, setLoadingRates] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
   const [orderId, setOrderId] = useState(null);
-  const [taxPercent, setTaxPercent] = useState(0);
-
-  useEffect(() => { api.get('/config').then(r => setTaxPercent(r.data.taxPercent || 0)).catch(() => {}); }, []);
-
-  const set = (f) => (e) => setShippingForm({...shippingForm, [f]: e.target.value});
-
-  const totalWeight = cart.items.reduce((sum, i) => sum + (i.weight || 1) * i.quantity, 0);
-  const tax = cart.subtotal * (taxPercent / 100);
-  const shippingCost = selectedRate?.cost || 0;
-  const grandTotal = cart.subtotal + shippingCost + tax;
-
-  const fetchRates = async (e) => {
-    e.preventDefault();
-    setLoadingRates(true);
-    try {
-      const { data } = await api.post('/shipping/rates', {
-        state: shippingForm.state,
-        weight: totalWeight,
-        subtotal: cart.subtotal
-      });
-      setShippingRates(data.rates);
-      setSelectedRate(data.rates[0]);
-      setStep(2);
-    } catch (err) {
-      setError('Could not fetch shipping rates. Please try again.');
-    } finally {
-      setLoadingRates(false);
-    }
-  };
-
-  const createOrder = async () => {
-    setProcessing(true);
-    setError('');
-    try {
-      const { data } = await api.post('/orders', {
-        shipping_name: shippingForm.name,
-        shipping_address: shippingForm.address,
-        shipping_city: shippingForm.city,
-        shipping_state: shippingForm.state,
-        shipping_zip: shippingForm.zip,
-        shipping_method: selectedRate.name,
-        shipping_cost: selectedRate.cost
-      });
-      setOrderId(data.order_id);
-      setStep(3);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to create order');
-    } finally {
-      setProcessing(false);
-    }
-  };
 
   const handlePayment = async (e) => {
     e.preventDefault();
     if (!stripe || !elements) return;
     setProcessing(true);
     setError('');
-
     try {
-      // Get payment intent
-      const { data: piData } = await api.post(`/orders/${orderId}/payment-intent`);
+      // Create the order once (reused if a first attempt fails).
+      let oid = orderId;
+      if (!oid) {
+        oid = await onCreateOrder('card');
+        if (!oid) { setProcessing(false); return; }
+        setOrderId(oid);
+      }
 
+      const { data: piData } = await api.post(`/orders/${oid}/payment-intent`);
       const result = await stripe.confirmCardPayment(piData.client_secret, {
         payment_method: {
           card: elements.getElement(CardElement),
-          billing_details: { name: shippingForm.name }
+          billing_details: { name: user?.contact_name || user?.company_name || '' }
         }
       });
+      if (result.error) { setError(result.error.message); setProcessing(false); return; }
 
-      if (result.error) {
-        setError(result.error.message);
-        return;
-      }
-
-      // Confirm on backend
-      await api.post(`/orders/${orderId}/confirm`, {
-        payment_intent_id: result.paymentIntent.id
-      });
-
+      await api.post(`/orders/${oid}/confirm`, { payment_intent_id: result.paymentIntent.id });
       clearCart();
-      navigate(`/orders/${orderId}?success=1`);
+      navigate(`/orders/${oid}?success=1`);
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Payment failed');
-    } finally {
       setProcessing(false);
     }
   };
 
-  if (!cart.items.length && step < 3) {
+  return (
+    <form onSubmit={handlePayment} className="checkout-form">
+      {error && <div className="alert alert-error" style={{ marginBottom: 4 }}>{error}</div>}
+      <div className="form-group">
+        <label className="form-label">Card Details</label>
+        <div className="stripe-card-wrapper">
+          <CardElement options={{
+            style: {
+              base: {
+                fontSize: '16px',
+                color: '#1b2330',
+                fontFamily: '-apple-system, Inter, sans-serif',
+                iconColor: '#C8922A',
+                '::placeholder': { color: '#8a94a6' }
+              },
+              invalid: { color: '#d64545', iconColor: '#d64545' }
+            }
+          }} />
+        </div>
+      </div>
+      <div className="payment-secure-note">
+        🔒 Payments are processed securely by Stripe. We never store your card details.
+      </div>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button type="button" className="btn btn-outline" onClick={onBack} disabled={processing}>← Back</button>
+        <button type="submit" className={`btn btn-primary btn-lg ${processing ? 'btn-loading' : ''}`} style={{ flex: 1 }} disabled={!stripe || processing}>
+          Pay {fmt(amount)}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function CheckoutFlow({ stripePromise, config }) {
+  const navigate = useNavigate();
+  const { cart, clearCart } = useCart();
+
+  const [method, setMethod] = useState('');   // 'card' | 'zelle' | 'cash'
+  const [step, setStep] = useState(1);         // 1 = choose method, 2 = pay / place
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState('');
+
+  const taxPercent = config.taxPercent || 0;
+  const zelleRecipient = config.zelleRecipient || DEFAULT_ZELLE;
+  const pickupAddress = config.pickupAddress || DEFAULT_PICKUP;
+
+  const totalWeight = cart.items.reduce((sum, i) => sum + (i.weight || 1) * i.quantity, 0);
+  const tax = cart.subtotal * (taxPercent / 100);
+  const grandTotal = cart.subtotal + tax; // pickup — no shipping charge
+
+  // Create the order server-side. Returns order_id, or null on error.
+  const createOrder = async (pm) => {
+    setError('');
+    try {
+      const { data } = await api.post('/orders', { payment_method: pm });
+      return data.order_id;
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create order');
+      return null;
+    }
+  };
+
+  // Zelle / cash — place the (unpaid) order now and go to the invoice.
+  const placeOfflineOrder = async () => {
+    setProcessing(true);
+    const orderId = await createOrder(method);
+    if (orderId) { clearCart(); navigate(`/orders/${orderId}?placed=1`); }
+    else setProcessing(false);
+  };
+
+  if (!cart.items.length) {
     return (
-      <div className="text-center" style={{padding: '80px 0'}}>
+      <div className="text-center" style={{ padding: '80px 0' }}>
         <p className="text-muted">Your cart is empty.</p>
-        <Link to="/catalog" className="btn btn-primary" style={{marginTop: '16px'}}>Browse Products</Link>
+        <Link to="/catalog" className="btn btn-primary" style={{ marginTop: '16px' }}>Browse Products</Link>
       </div>
     );
   }
 
-  const total = grandTotal;
+  const methods = [
+    { id: 'card', icon: '💳', title: 'Pay by Card', desc: 'Pay securely online now with any debit or credit card.', disabled: !stripePromise },
+    { id: 'zelle', icon: '📲', title: 'Pay by Zelle', desc: 'Get an invoice and send payment by Zelle — no card needed.' },
+    { id: 'cash', icon: '💵', title: 'Cash at Pickup', desc: 'Reserve your order and pay cash when you pick it up.' }
+  ];
 
   return (
     <div className="checkout-layout">
       <div className="checkout-main">
         {/* Step indicators */}
         <div className="checkout-steps">
-          {['Shipping Address', 'Shipping Method', 'Payment'].map((s, i) => (
-            <div key={s} className={`checkout-step ${step > i+1 ? 'done' : step === i+1 ? 'active' : ''}`}>
-              <span className="cs-num">{step > i+1 ? '✓' : i+1}</span>
+          {['Payment Method', method === 'card' ? 'Card Payment' : 'Review & Place'].map((s, i) => (
+            <div key={i} className={`checkout-step ${step > i + 1 ? 'done' : step === i + 1 ? 'active' : ''}`}>
+              <span className="cs-num">{step > i + 1 ? '✓' : i + 1}</span>
               <span>{s}</span>
             </div>
           ))}
         </div>
 
-        {error && <div className="alert alert-error" style={{marginBottom: '20px'}}>{error}</div>}
+        {error && <div className="alert alert-error" style={{ marginBottom: 20 }}>{error}</div>}
 
-        {/* Step 1 — Shipping Address */}
+        {/* Step 1 — choose payment method */}
         {step === 1 && (
           <div className="card">
-            <div className="card-header"><h3>Shipping Address</h3></div>
+            <div className="card-header"><h3>How would you like to pay?</h3></div>
             <div className="card-body">
-              <form onSubmit={fetchRates} className="checkout-form">
-                <div className="form-group">
-                  <label className="form-label required">Full Name / Company</label>
-                  <input className="form-input" required value={shippingForm.name} onChange={set('name')} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label required">Street Address</label>
-                  <input className="form-input" required value={shippingForm.address} onChange={set('address')} />
-                </div>
-                <div className="form-row-3">
-                  <div className="form-group">
-                    <label className="form-label required">City</label>
-                    <input className="form-input" required value={shippingForm.city} onChange={set('city')} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label required">State</label>
-                    <select className="form-select" required value={shippingForm.state} onChange={set('state')}>
-                      <option value="">State</option>
-                      {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label required">ZIP Code</label>
-                    <input className="form-input" required value={shippingForm.zip} onChange={set('zip')} />
-                  </div>
-                </div>
-                <button type="submit" className={`btn btn-primary btn-lg ${loadingRates ? 'btn-loading' : ''}`} disabled={loadingRates}>
-                  Continue to Shipping →
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2 — Shipping Method */}
-        {step === 2 && (
-          <div className="card">
-            <div className="card-header">
-              <h3>Shipping Method</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setStep(1)}>Edit Address</button>
-            </div>
-            <div className="card-body">
-              <div className="shipping-address-preview">
-                📍 {shippingForm.name} · {shippingForm.address}, {shippingForm.city}, {shippingForm.state} {shippingForm.zip}
-              </div>
-              <div className="shipping-rates">
-                {shippingRates.map(rate => (
-                  <label key={rate.id} className={`shipping-rate ${selectedRate?.id === rate.id ? 'selected' : ''}`}>
-                    <input type="radio" name="shipping" checked={selectedRate?.id === rate.id} onChange={() => setSelectedRate(rate)} />
-                    <div className="shipping-rate-info">
-                      <div className="shipping-rate-name">
-                        <strong>{rate.name}</strong>
-                        {rate.note && <span className="shipping-rate-note">{rate.note}</span>}
-                      </div>
-                      <div className="shipping-rate-details">
-                        {rate.details || `${rate.carrier} · Est. ${rate.estimated_days} business day${rate.estimated_days !== '1' ? 's' : ''}`}
-                      </div>
-                    </div>
-                    <div className="shipping-rate-price">
-                      {rate.cost === 0 ? <span className="text-success font-bold">FREE</span> : <strong>{fmt(rate.cost)}</strong>}
-                    </div>
+              <div className="pay-methods">
+                {methods.map(m => (
+                  <label key={m.id} className={`pay-method ${method === m.id ? 'selected' : ''} ${m.disabled ? 'disabled' : ''}`}>
+                    <input type="radio" name="paymethod" disabled={m.disabled} checked={method === m.id} onChange={() => setMethod(m.id)} />
+                    <span className="pay-method-icon">{m.icon}</span>
+                    <span className="pay-method-text">
+                      <strong>{m.title}{m.disabled ? ' (unavailable)' : ''}</strong>
+                      <span>{m.desc}</span>
+                    </span>
                   </label>
                 ))}
               </div>
-              <div style={{marginTop: '24px', display: 'flex', gap: '12px'}}>
-                <button className="btn btn-outline" onClick={() => setStep(1)}>← Back</button>
-                <button className={`btn btn-primary btn-lg ${processing ? 'btn-loading' : ''}`} onClick={createOrder} disabled={!selectedRate || processing}>
-                  Continue to Payment →
-                </button>
-              </div>
+              <button className="btn btn-primary btn-lg btn-full" style={{ marginTop: 24 }} disabled={!method} onClick={() => setStep(2)}>
+                Continue →
+              </button>
             </div>
           </div>
         )}
 
-        {/* Step 3 — Payment */}
-        {step === 3 && (
+        {/* Step 2 — Card */}
+        {step === 2 && method === 'card' && stripePromise && (
           <div className="card">
-            <div className="card-header"><h3>Payment</h3></div>
+            <div className="card-header">
+              <h3>Card Payment</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setStep(1)}>Change method</button>
+            </div>
             <div className="card-body">
-              <div className="shipping-address-preview">
-                📍 {shippingForm.address}, {shippingForm.city}, {shippingForm.state} · {selectedRate?.name}
+              <Elements stripe={stripePromise}>
+                <CardPaymentStep amount={grandTotal} onCreateOrder={createOrder} onBack={() => setStep(1)} />
+              </Elements>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2 — Zelle / Cash review + place */}
+        {step === 2 && (method === 'zelle' || method === 'cash') && (
+          <div className="card">
+            <div className="card-header">
+              <h3>Review &amp; Place Order</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setStep(1)}>Change method</button>
+            </div>
+            <div className="card-body">
+              <div className="pay-instructions">
+                {method === 'zelle' ? (
+                  <>
+                    <div className="pay-instructions-title">📲 Pay by Zelle</div>
+                    <p>After you place your order, send <strong>{fmt(grandTotal)}</strong> via Zelle to:</p>
+                    <div className="pay-highlight">{zelleRecipient}</div>
+                    <p className="text-muted">Put your order number in the Zelle memo. We'll prepare your order as soon as your payment arrives.</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="pay-instructions-title">💵 Cash at Pickup</div>
+                    <p>Reserve your order now and pay <strong>{fmt(grandTotal)}</strong> in cash when you pick up at:</p>
+                    <div className="pay-highlight">{pickupAddress}</div>
+                    <p className="text-muted">No card or shipping address needed — we'll have your order ready for you.</p>
+                  </>
+                )}
               </div>
-              <form onSubmit={handlePayment} className="checkout-form">
-                <div className="form-group">
-                  <label className="form-label">Card Details</label>
-                  <div className="stripe-card-wrapper">
-                    <CardElement options={{
-                      style: {
-                        base: {
-                          fontSize: '16px',
-                          color: '#f5f5f7',
-                          fontFamily: '-apple-system, Inter, sans-serif',
-                          iconColor: '#D4A23A',
-                          '::placeholder': { color: '#6e6e73' }
-                        },
-                        invalid: { color: '#ff453a', iconColor: '#ff453a' }
-                      }
-                    }} />
-                  </div>
-                </div>
-                <div className="payment-secure-note">
-                  🔒 Payments are processed securely by Stripe. We never store your card details.
-                </div>
-                <button type="submit" className={`btn btn-primary btn-full btn-lg ${processing ? 'btn-loading' : ''}`} disabled={!stripe || processing}>
-                  Pay {fmt(total)}
+              <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                <button className="btn btn-outline" onClick={() => setStep(1)} disabled={processing}>← Back</button>
+                <button className={`btn btn-primary btn-lg ${processing ? 'btn-loading' : ''}`} style={{ flex: 1 }} onClick={placeOfflineOrder} disabled={processing}>
+                  Place Order · {fmt(grandTotal)}
                 </button>
-              </form>
+              </div>
             </div>
           </div>
         )}
@@ -284,10 +253,7 @@ function CheckoutForm() {
             <div className="checkout-totals">
               <div className="checkout-total-row"><span>Subtotal</span><span>{fmt(cart.subtotal)}</span></div>
               <div className="checkout-total-row"><span>Total Weight</span><span>{totalWeight.toFixed(1)} lbs</span></div>
-              <div className="checkout-total-row">
-                <span>Shipping</span>
-                <span>{selectedRate ? (selectedRate.cost === 0 ? 'FREE' : fmt(selectedRate.cost)) : '—'}</span>
-              </div>
+              <div className="checkout-total-row"><span>Pickup</span><span className="text-success">FREE</span></div>
               <div className="checkout-total-row"><span>Sales Tax (FL {taxPercent}%)</span><span>{fmt(tax)}</span></div>
               <div className="checkout-total-row checkout-total-main">
                 <span>Total</span>
@@ -303,15 +269,15 @@ function CheckoutForm() {
 
 export default function Checkout() {
   const [stripePromise, setStripePromise] = useState(null);
-  const [configError, setConfigError] = useState(false);
+  const [config, setConfig] = useState(null);
 
   useEffect(() => {
     api.get('/config')
       .then(r => {
+        setConfig(r.data);
         if (r.data.stripePublicKey) setStripePromise(loadStripe(r.data.stripePublicKey));
-        else setConfigError(true);
       })
-      .catch(() => setConfigError(true));
+      .catch(() => setConfig({})); // still allow Zelle / cash even if config fails
   }, []);
 
   return (
@@ -319,19 +285,13 @@ export default function Checkout() {
       <div className="page-header">
         <div className="container">
           <h1>Checkout</h1>
-          <p>Secure checkout — pay safely with any card</p>
+          <p>Choose how you'd like to pay — card, Zelle, or cash at pickup</p>
         </div>
       </div>
       <div className="container section-sm">
-        {configError ? (
-          <div className="alert alert-error">Payments are not configured yet. Please contact us to place your order.</div>
-        ) : !stripePromise ? (
-          <div className="loading-center"><div className="spinner" /></div>
-        ) : (
-          <Elements stripe={stripePromise}>
-            <CheckoutForm />
-          </Elements>
-        )}
+        {!config
+          ? <div className="loading-center"><div className="spinner" /></div>
+          : <CheckoutFlow stripePromise={stripePromise} config={config} />}
       </div>
     </div>
   );

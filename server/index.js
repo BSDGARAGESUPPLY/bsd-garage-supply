@@ -31,7 +31,9 @@ app.use('/api/auth/', authLimiter);
 app.get('/api/config', (req, res) => {
   res.json({
     stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLIC_KEY || '',
-    taxPercent: parseFloat(process.env.SALES_TAX_PERCENT || '6.5')
+    taxPercent: parseFloat(process.env.SALES_TAX_PERCENT || '6.5'),
+    zelleRecipient: process.env.ZELLE_RECIPIENT || 'bsdgaragesupply@gmail.com',
+    pickupAddress: '2634 NE 9th Ave, Cape Coral, FL 33909'
   });
 });
 

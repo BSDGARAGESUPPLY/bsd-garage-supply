@@ -59,6 +59,31 @@ function itemsTable(items) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:12px 0;">${rows}</table>`;
 }
 
+// Totals block (subtotal / shipping / tax / total) — shipping & tax rows only when > 0.
+function totalsTable(order) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:14px;">
+    <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">${money(order.subtotal)}</td></tr>
+    ${order.shipping_cost > 0 ? `<tr><td style="padding:4px 0;color:#666;">Shipping</td><td style="padding:4px 0;text-align:right;">${money(order.shipping_cost)}</td></tr>` : ''}
+    ${order.tax > 0 ? `<tr><td style="padding:4px 0;color:#666;">Sales Tax</td><td style="padding:4px 0;text-align:right;">${money(order.tax)}</td></tr>` : ''}
+    <tr><td style="padding:8px 0;font-weight:800;font-size:16px;border-top:2px solid #eee;">Total</td>
+        <td style="padding:8px 0;text-align:right;font-weight:800;font-size:16px;border-top:2px solid #eee;color:${GOLD};">${money(order.total)}</td></tr>
+  </table>`;
+}
+
+// Pickup line, or a shipping address if one was provided.
+function fulfillmentLine(order) {
+  const isPickup = order.shipping_method === 'Local Pickup' || !order.shipping_address;
+  if (isPickup) {
+    return `<p style="margin:18px 0 0;font-size:14px;color:#444;">Pickup:<br>
+      <span style="color:#666;">${order.shipping_name || ''}<br>2634 NE 9th Ave, Cape Coral, FL 33909</span></p>`;
+  }
+  return `<p style="margin:18px 0 0;font-size:14px;color:#444;">Shipping to:<br>
+    <span style="color:#666;">${order.shipping_name}<br>${order.shipping_address}<br>${order.shipping_city}, ${order.shipping_state} ${order.shipping_zip}</span></p>`;
+}
+
+// Human label for a payment method.
+function paymentLabel(m) { return m === 'cash' ? 'Cash at pickup' : m === 'zelle' ? 'Zelle' : 'Card'; }
+
 // ── Welcome ──────────────────────────────────────────────────────────────────
 function welcome(user) {
   const body = `
@@ -82,35 +107,54 @@ function orderConfirmation(order, items) {
     <p style="margin:0 0 4px;font-size:15px;color:#444;">Thanks for your order! We're getting it ready.</p>
     <p style="margin:0 0 20px;font-size:14px;color:#888;">Order <strong style="color:${GOLD};">${order.order_number}</strong></p>
     ${itemsTable(items)}
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:14px;">
-      <tr><td style="padding:4px 0;color:#666;">Subtotal</td><td style="padding:4px 0;text-align:right;">${money(order.subtotal)}</td></tr>
-      <tr><td style="padding:4px 0;color:#666;">Shipping</td><td style="padding:4px 0;text-align:right;">${money(order.shipping_cost)}</td></tr>
-      ${order.tax > 0 ? `<tr><td style="padding:4px 0;color:#666;">Sales Tax</td><td style="padding:4px 0;text-align:right;">${money(order.tax)}</td></tr>` : ''}
-      <tr><td style="padding:8px 0;font-weight:800;font-size:16px;border-top:2px solid #eee;">Total</td>
-          <td style="padding:8px 0;text-align:right;font-weight:800;font-size:16px;border-top:2px solid #eee;color:${GOLD};">${money(order.total)}</td></tr>
-    </table>
-    <p style="margin:18px 0 0;font-size:14px;color:#444;">
-      Shipping to:<br>
-      <span style="color:#666;">${order.shipping_name}<br>${order.shipping_address}<br>${order.shipping_city}, ${order.shipping_state} ${order.shipping_zip}</span>
-    </p>
+    ${totalsTable(order)}
+    ${fulfillmentLine(order)}
     ${button('View Your Order', SITE_URL + '/orders/' + order.id)}`;
   return { subject: `Order ${order.order_number} confirmed — BSD Garage Supply`, html: layout('Order confirmed', body) };
 }
 
+// ── Invoice for unpaid Zelle / cash orders (to customer) ─────────────────────
+function orderInvoice(order, items, opts = {}) {
+  const method = order.payment_method === 'cash' ? 'Cash' : 'Zelle';
+  const zelle = opts.zelleRecipient || 'bsdgaragesupply@gmail.com';
+  const pickup = opts.pickupAddress || '2634 NE 9th Ave, Cape Coral, FL 33909';
+  const instructions = order.payment_method === 'cash'
+    ? `<p style="margin:0 0 6px;font-size:15px;color:#333;">Please bring <strong>${money(order.total)}</strong> in cash when you pick up your order at:</p>
+       <p style="margin:0;font-size:15px;color:#333;"><strong>${pickup}</strong></p>`
+    : `<p style="margin:0 0 6px;font-size:15px;color:#333;">Send <strong>${money(order.total)}</strong> via <strong>Zelle</strong> to:</p>
+       <p style="margin:0 0 6px;font-size:18px;font-weight:800;color:${GOLD};">${zelle}</p>
+       <p style="margin:0;font-size:13px;color:#666;">Put your order number <strong>${order.order_number}</strong> in the memo so we can match your payment.</p>`;
+  const body = `
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;">Invoice — payment required 🧾</h1>
+    <p style="margin:0 0 4px;font-size:15px;color:#444;">Thanks for your order! It's reserved and waiting for payment.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#888;">Order <strong style="color:${GOLD};">${order.order_number}</strong> &nbsp;·&nbsp; <span style="color:#c0392b;font-weight:700;">UNPAID</span></p>
+    ${itemsTable(items)}
+    ${totalsTable(order)}
+    <div style="margin:22px 0 0;padding:18px;background:#FBF4E4;border:1px solid #eadfc2;border-radius:12px;">
+      <p style="margin:0 0 10px;font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:${GOLD};">How to pay — ${method}</p>
+      ${instructions}
+    </div>
+    ${button('View Invoice', SITE_URL + '/orders/' + order.id)}
+    <p style="margin:6px 0 0;font-size:13px;color:#888;">Once we receive your ${method.toLowerCase()} payment we'll mark your order paid and get it ready for pickup.</p>`;
+  return { subject: `Invoice ${order.order_number} — payment required (${money(order.total)})`, html: layout('Invoice', body) };
+}
+
 // ── New order alert (to admin/owner) ─────────────────────────────────────────
 function newOrderAdmin(order, items, customer) {
+  const unpaid = order.payment_status !== 'paid';
+  const payLine = `<p style="margin:0 0 14px;font-size:14px;color:#444;">Payment: <strong>${paymentLabel(order.payment_method)}</strong>${unpaid ? ` &nbsp;·&nbsp; <span style="color:#c0392b;font-weight:700;">UNPAID — awaiting payment</span>` : ` &nbsp;·&nbsp; <span style="color:#27893f;font-weight:700;">PAID</span>`}</p>`;
   const body = `
     <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;">🛒 New order received</h1>
     <p style="margin:0 0 4px;font-size:15px;color:#444;"><strong>${order.order_number}</strong> &nbsp;·&nbsp; ${money(order.total)}</p>
-    <p style="margin:0 0 20px;font-size:14px;color:#888;">
+    <p style="margin:0 0 8px;font-size:14px;color:#888;">
       ${customer?.company_name || ''} (${customer?.contact_name || ''})<br>${customer?.email || ''} &nbsp;·&nbsp; ${customer?.phone || ''}
     </p>
+    ${payLine}
     ${itemsTable(items)}
     <p style="margin:8px 0 0;font-size:15px;font-weight:700;">Total: <span style="color:${GOLD};">${money(order.total)}</span></p>
-    <p style="margin:18px 0 0;font-size:14px;color:#444;">Ship to:<br>
-      <span style="color:#666;">${order.shipping_name}<br>${order.shipping_address}<br>${order.shipping_city}, ${order.shipping_state} ${order.shipping_zip}</span></p>
+    ${fulfillmentLine(order)}
     ${button('Open in Admin', SITE_URL + '/admin/orders')}`;
-  return { subject: `New order ${order.order_number} — ${money(order.total)}`, html: layout('New order', body) };
+  return { subject: `New order ${order.order_number} — ${money(order.total)}${unpaid ? ' (UNPAID)' : ''}`, html: layout('New order', body) };
 }
 
 // ── Shipped (to customer) ────────────────────────────────────────────────────
@@ -192,4 +236,4 @@ function accountApproved(user) {
   return { subject: 'Your BSD Garage Supply account is approved', html: layout('Approved', body) };
 }
 
-module.exports = { welcome, orderConfirmation, newOrderAdmin, orderShipped, passwordReset, contactMessage, newAccountPending, accountApproved };
+module.exports = { welcome, orderConfirmation, orderInvoice, newOrderAdmin, orderShipped, passwordReset, contactMessage, newAccountPending, accountApproved };

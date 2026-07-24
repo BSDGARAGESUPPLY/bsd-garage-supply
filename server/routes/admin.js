@@ -181,6 +181,18 @@ router.put('/orders/:id', (req, res) => {
   res.json({ ...order, items });
 });
 
+// Mark an offline (Zelle / cash) order as paid or back to unpaid.
+// Stock was already reserved when the order was placed, so this is a status flip.
+router.put('/orders/:id/paid', (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  const paid = req.body.paid !== false; // default true
+  const newStatus = paid && order.status === 'pending_payment' ? 'processing' : order.status;
+  db.prepare(`UPDATE orders SET payment_status=?, status=?, updated_at=datetime('now') WHERE id=?`)
+    .run(paid ? 'paid' : 'unpaid', newStatus, req.params.id);
+  res.json(db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id));
+});
+
 // Low stock report
 router.get('/inventory/low-stock', (req, res) => {
   const products = db.prepare(`

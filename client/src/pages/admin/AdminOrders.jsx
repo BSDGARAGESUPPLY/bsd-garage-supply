@@ -4,6 +4,7 @@ import api from '../../api';
 
 const fmt = (n) => `$${Number(n || 0).toFixed(2)}`;
 const STATUSES = ['pending_payment','processing','shipped','delivered','cancelled'];
+const PAY_LABEL = { card:'Card', zelle:'Zelle', cash:'Cash' };
 
 export default function AdminOrders() {
   const [data, setData] = useState({ orders: [], total: 0 });
@@ -32,6 +33,18 @@ export default function AdminOrders() {
     try {
       await api.put(`/admin/orders/${selected.id}`, editForm);
       setSelected(null);
+      fetchOrders();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const markPaid = async (paid) => {
+    setSaving(true);
+    try {
+      const { data } = await api.put(`/admin/orders/${selected.id}/paid`, { paid });
+      setSelected({ ...selected, payment_status: data.payment_status, status: data.status });
+      setEditForm(f => ({ ...f, status: data.status }));
       fetchOrders();
     } finally {
       setSaving(false);
@@ -71,7 +84,10 @@ export default function AdminOrders() {
                     </td>
                     <td style={{fontSize:'13px', color:'var(--text-secondary)'}}>{new Date(o.created_at).toLocaleDateString()}</td>
                     <td><strong>{fmt(o.total)}</strong></td>
-                    <td><span className={`badge ${o.payment_status === 'paid' ? 'badge-success' : 'badge-warning'}`}>{o.payment_status}</span></td>
+                    <td>
+                      <span className={`badge ${o.payment_status === 'paid' ? 'badge-success' : 'badge-warning'}`}>{o.payment_status}</span>
+                      <div style={{fontSize:'11px', color:'var(--text-secondary)', marginTop:'3px'}}>{PAY_LABEL[o.payment_method] || 'Card'}</div>
+                    </td>
                     <td><span className={`badge status-${o.status}`}>{o.status.replace('_', ' ')}</span></td>
                     <td><button className="btn btn-outline btn-sm" onClick={() => openOrder(o)}>Edit</button></td>
                   </tr>
@@ -94,8 +110,22 @@ export default function AdminOrders() {
                 <div><span style={{color:'var(--text-secondary)'}}>Customer:</span> <strong>{selected.company_name}</strong></div>
                 <div><span style={{color:'var(--text-secondary)'}}>Total:</span> <strong>{fmt(selected.total)}</strong></div>
                 <div><span style={{color:'var(--text-secondary)'}}>Payment:</span> <span className={`badge ${selected.payment_status === 'paid' ? 'badge-success' : 'badge-warning'}`}>{selected.payment_status}</span></div>
-                <div><span style={{color:'var(--text-secondary)'}}>Method:</span> {selected.shipping_method}</div>
+                <div><span style={{color:'var(--text-secondary)'}}>Method:</span> <strong>{PAY_LABEL[selected.payment_method] || 'Card'}</strong></div>
               </div>
+
+              {selected.payment_status !== 'paid' && (
+                <div style={{marginBottom:'20px', padding:'14px 16px', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', flexWrap:'wrap'}}>
+                  <span style={{fontSize:'13px', color:'var(--text-secondary)'}}>
+                    {selected.payment_method === 'zelle' ? 'Received the Zelle payment?' : selected.payment_method === 'cash' ? 'Collected cash at pickup?' : 'Payment not completed yet.'}
+                  </span>
+                  <button className={`btn btn-primary btn-sm ${saving ? 'btn-loading' : ''}`} onClick={() => markPaid(true)} disabled={saving}>✓ Mark as Paid</button>
+                </div>
+              )}
+              {selected.payment_status === 'paid' && selected.payment_method !== 'card' && (
+                <div style={{marginBottom:'20px'}}>
+                  <button className="btn btn-outline btn-sm" onClick={() => markPaid(false)} disabled={saving}>Undo — mark unpaid</button>
+                </div>
+              )}
 
               <div style={{display:'flex', flexDirection:'column', gap:'14px'}}>
                 <div className="form-group">
