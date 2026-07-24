@@ -23,7 +23,7 @@ function fulfillOrder(orderId) {
       db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?').run(item.quantity, item.product_id);
     }
     db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(order.user_id);
-    db.prepare(`UPDATE orders SET status='processing', payment_status='paid', updated_at=datetime('now') WHERE id = ?`).run(orderId);
+    db.prepare(`UPDATE orders SET status='processing', payment_status='paid', stock_reserved=1, updated_at=datetime('now') WHERE id = ?`).run(orderId);
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');

@@ -266,7 +266,7 @@ tbody tr:hover { background: #f8fafc; }
 
 /* Print — hide chrome, single column, plain background (invoice printing) */
 @media print {
-  .no-print { display: none !important; }
+  .no-print, .navbar, .footer { display: none !important; }
   .order-detail-grid { grid-template-columns: 1fr !important; }
   body { background: #fff !important; }
 }

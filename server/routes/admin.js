@@ -163,10 +163,11 @@ router.get('/orders', (req, res) => {
 });
 
 router.put('/orders/:id', (req, res) => {
-  const { status, tracking_number, shipping_carrier, notes } = req.body;
-  const prev = db.prepare('SELECT status FROM orders WHERE id=?').get(req.params.id);
-  db.prepare(`UPDATE orders SET status=?,tracking_number=?,shipping_carrier=?,notes=?,updated_at=datetime('now') WHERE id=?`)
-    .run(status, tracking_number || null, shipping_carrier || null, notes || null, req.params.id);
+  const { status, tracking_number, shipping_carrier, notes, payment_method } = req.body;
+  const prev = db.prepare('SELECT status, payment_method FROM orders WHERE id=?').get(req.params.id);
+  const method = ['card', 'zelle', 'cash'].includes(payment_method) ? payment_method : prev.payment_method;
+  db.prepare(`UPDATE orders SET status=?,tracking_number=?,shipping_carrier=?,notes=?,payment_method=?,updated_at=datetime('now') WHERE id=?`)
+    .run(status, tracking_number || null, shipping_carrier || null, notes || null, method, req.params.id);
   const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
   const items = db.prepare('SELECT * FROM order_items WHERE order_id=?').all(order.id);
 
@@ -202,10 +203,12 @@ router.put('/orders/:id/approve', (req, res) => {
 
   db.exec('BEGIN');
   try {
-    for (const item of items) {
-      db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?').run(item.quantity, item.product_id);
+    if (!order.stock_reserved) {
+      for (const item of items) {
+        db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?').run(item.quantity, item.product_id);
+      }
     }
-    db.prepare(`UPDATE orders SET status='pending_payment', updated_at=datetime('now') WHERE id=?`).run(order.id);
+    db.prepare(`UPDATE orders SET status='pending_payment', stock_reserved=1, updated_at=datetime('now') WHERE id=?`).run(order.id);
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');
@@ -224,13 +227,34 @@ router.put('/orders/:id/approve', (req, res) => {
   res.json(db.prepare('SELECT * FROM orders WHERE id=?').get(order.id));
 });
 
-// Mark an offline (Zelle / cash) order as paid or back to unpaid.
-// Stock was already reserved on approval, so this is a status flip.
+// Mark an order paid (or back to unpaid). Reserves stock the first time it's
+// marked paid if it wasn't already reserved (e.g. an order that started as card
+// but the customer ended up paying by Zelle/cash).
 router.put('/orders/:id/paid', (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
   const paid = req.body.paid !== false; // default true
-  const newStatus = paid && order.status === 'pending_payment' ? 'processing' : order.status;
+
+  if (paid && !order.stock_reserved) {
+    const items = db.prepare('SELECT * FROM order_items WHERE order_id=?').all(order.id);
+    for (const it of items) {
+      const p = db.prepare('SELECT name, stock_qty FROM products WHERE id=?').get(it.product_id);
+      if (p && p.stock_qty < it.quantity) {
+        return res.status(400).json({ error: `Not enough stock for ${p.name} (need ${it.quantity}, have ${p.stock_qty}).` });
+      }
+    }
+    db.exec('BEGIN');
+    try {
+      for (const it of items) db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id=?').run(it.quantity, it.product_id);
+      db.prepare('UPDATE orders SET stock_reserved=1 WHERE id=?').run(order.id);
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  const newStatus = paid && (order.status === 'pending_approval' || order.status === 'pending_payment') ? 'processing' : order.status;
   db.prepare(`UPDATE orders SET payment_status=?, status=?, updated_at=datetime('now') WHERE id=?`)
     .run(paid ? 'paid' : 'unpaid', newStatus, req.params.id);
   res.json(db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id));

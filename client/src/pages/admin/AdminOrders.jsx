@@ -25,7 +25,7 @@ export default function AdminOrders() {
 
   const openOrder = (order) => {
     setSelected(order);
-    setEditForm({ status: order.status, tracking_number: order.tracking_number || '', shipping_carrier: order.shipping_carrier || '', notes: order.notes || '' });
+    setEditForm({ status: order.status, tracking_number: order.tracking_number || '', shipping_carrier: order.shipping_carrier || '', notes: order.notes || '', payment_method: order.payment_method || 'card' });
   };
 
   const handleSave = async () => {
@@ -150,11 +150,21 @@ export default function AdminOrders() {
               )}
 
               <div style={{display:'flex', flexDirection:'column', gap:'14px'}}>
-                <div className="form-group">
-                  <label className="form-label">Order Status</label>
-                  <select className="form-select" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}>
-                    {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
-                  </select>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Order Status</label>
+                    <select className="form-select" value={editForm.status} onChange={e => setEditForm({...editForm, status: e.target.value})}>
+                      {STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Payment Method</label>
+                    <select className="form-select" value={editForm.payment_method} onChange={e => setEditForm({...editForm, payment_method: e.target.value})}>
+                      <option value="card">Card</option>
+                      <option value="zelle">Zelle</option>
+                      <option value="cash">Cash</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
@@ -172,9 +182,12 @@ export default function AdminOrders() {
                 </div>
               </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn btn-outline" onClick={() => setSelected(null)}>Cancel</button>
-              <button className={`btn btn-primary ${saving ? 'btn-loading' : ''}`} onClick={handleSave} disabled={saving}>Save Changes</button>
+            <div className="modal-footer" style={{justifyContent:'space-between'}}>
+              <a href={`/orders/${selected.id}`} target="_blank" rel="noreferrer" className="btn btn-outline">🖨 View / Print Invoice</a>
+              <div style={{display:'flex', gap:'8px'}}>
+                <button className="btn btn-outline" onClick={() => setSelected(null)}>Cancel</button>
+                <button className={`btn btn-primary ${saving ? 'btn-loading' : ''}`} onClick={handleSave} disabled={saving}>Save Changes</button>
+              </div>
             </div>
           </div>
         </div>

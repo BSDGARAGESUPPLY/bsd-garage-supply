@@ -121,6 +121,8 @@ db.exec(`
 try { db.exec("ALTER TABLE users ADD COLUMN price_tier TEXT"); } catch { /* already exists */ }
 // Add payment_method column to orders (card | zelle | cash).
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'card'"); } catch { /* already exists */ }
+// Track whether an order's stock has been reserved, so we never double-decrement.
+try { db.exec("ALTER TABLE orders ADD COLUMN stock_reserved INTEGER DEFAULT 0"); } catch { /* already exists */ }
 
 // Run-once helper.
 function once(key, fn) {
@@ -136,6 +138,17 @@ function once(key, fn) {
 once('split_price_tiers_x9', () => {
   db.exec('UPDATE products SET retail_price = ROUND(wholesale_price * 9, 2)');
   console.log('💰 Migrated prices: Retail = Tech × 9');
+});
+
+// Mark existing orders whose stock was already decremented, so a later "mark paid"
+// doesn't decrement a second time. Covers paid orders, fulfilled orders, and
+// approved (pending_payment) offline orders.
+once('backfill_stock_reserved', () => {
+  db.exec(`UPDATE orders SET stock_reserved = 1
+    WHERE payment_status = 'paid'
+       OR status IN ('processing','shipped','delivered')
+       OR (status = 'pending_payment' AND payment_method IN ('zelle','cash'))`);
+  console.log('📦 Backfilled stock_reserved flag');
 });
 
 module.exports = db;
