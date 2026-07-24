@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api';
 
 const fmt = (n) => `$${Number(n || 0).toFixed(2)}`;
-const STATUSES = ['pending_payment','processing','shipped','delivered','cancelled'];
+const STATUSES = ['pending_approval','pending_payment','processing','shipped','delivered','cancelled'];
 const PAY_LABEL = { card:'Card', zelle:'Zelle', cash:'Cash' };
 
 export default function AdminOrders() {
@@ -46,6 +46,20 @@ export default function AdminOrders() {
       setSelected({ ...selected, payment_status: data.payment_status, status: data.status });
       setEditForm(f => ({ ...f, status: data.status }));
       fetchOrders();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const approveOrder = async () => {
+    setSaving(true);
+    try {
+      const { data } = await api.put(`/admin/orders/${selected.id}/approve`);
+      setSelected({ ...selected, status: data.status });
+      setEditForm(f => ({ ...f, status: data.status }));
+      fetchOrders();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Could not approve this order.');
     } finally {
       setSaving(false);
     }
@@ -113,7 +127,15 @@ export default function AdminOrders() {
                 <div><span style={{color:'var(--text-secondary)'}}>Method:</span> <strong>{PAY_LABEL[selected.payment_method] || 'Card'}</strong></div>
               </div>
 
-              {selected.payment_status !== 'paid' && (
+              {selected.status === 'pending_approval' && (
+                <div style={{marginBottom:'20px', padding:'14px 16px', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', flexWrap:'wrap'}}>
+                  <span style={{fontSize:'13px', color:'var(--text-secondary)'}}>
+                    New {PAY_LABEL[selected.payment_method] || 'offline'} order awaiting your approval. Approving reserves stock and emails the invoice to the customer.
+                  </span>
+                  <button className={`btn btn-primary btn-sm ${saving ? 'btn-loading' : ''}`} onClick={approveOrder} disabled={saving}>✓ Approve &amp; Send Invoice</button>
+                </div>
+              )}
+              {selected.status !== 'pending_approval' && selected.payment_status !== 'paid' && (
                 <div style={{marginBottom:'20px', padding:'14px 16px', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px', flexWrap:'wrap'}}>
                   <span style={{fontSize:'13px', color:'var(--text-secondary)'}}>
                     {selected.payment_method === 'zelle' ? 'Received the Zelle payment?' : selected.payment_method === 'cash' ? 'Collected cash at pickup?' : 'Payment not completed yet.'}

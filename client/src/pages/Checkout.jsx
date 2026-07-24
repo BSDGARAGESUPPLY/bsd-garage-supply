@@ -8,7 +8,6 @@ import { useAuth } from '../context/AuthContext';
 import './Checkout.css';
 
 const fmt = (n) => `$${Number(n).toFixed(2)}`;
-const DEFAULT_ZELLE = 'bsdgaragesupply@gmail.com';
 const DEFAULT_PICKUP = '2634 NE 9th Ave, Cape Coral, FL 33909';
 
 // Card payment — must render inside <Elements>. Creates the order, then charges it.
@@ -97,7 +96,6 @@ function CheckoutFlow({ stripePromise, config }) {
   const [error, setError] = useState('');
 
   const taxPercent = config.taxPercent || 0;
-  const zelleRecipient = config.zelleRecipient || DEFAULT_ZELLE;
   const pickupAddress = config.pickupAddress || DEFAULT_PICKUP;
 
   const totalWeight = cart.items.reduce((sum, i) => sum + (i.weight || 1) * i.quantity, 0);
@@ -205,14 +203,13 @@ function CheckoutFlow({ stripePromise, config }) {
                 {method === 'zelle' ? (
                   <>
                     <div className="pay-instructions-title">📲 Pay by Zelle</div>
-                    <p>After you place your order, send <strong>{fmt(grandTotal)}</strong> via Zelle to:</p>
-                    <div className="pay-highlight">{zelleRecipient}</div>
-                    <p className="text-muted">Put your order number in the Zelle memo. We'll prepare your order as soon as your payment arrives.</p>
+                    <p>Submit your order for review. Once we approve it, we'll email you an invoice for <strong>{fmt(grandTotal)}</strong> to pay by Zelle.</p>
+                    <p className="text-muted">You'll receive your invoice by email shortly after placing the order.</p>
                   </>
                 ) : (
                   <>
                     <div className="pay-instructions-title">💵 Cash at Pickup</div>
-                    <p>Reserve your order now and pay <strong>{fmt(grandTotal)}</strong> in cash when you pick up at:</p>
+                    <p>Submit your order for review. Once we approve it, we'll email your invoice for <strong>{fmt(grandTotal)}</strong> to pay in cash when you pick up at:</p>
                     <div className="pay-highlight">{pickupAddress}</div>
                     <p className="text-muted">No card or shipping address needed — we'll have your order ready for you.</p>
                   </>
@@ -221,7 +218,7 @@ function CheckoutFlow({ stripePromise, config }) {
               <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                 <button className="btn btn-outline" onClick={() => setStep(1)} disabled={processing}>← Back</button>
                 <button className={`btn btn-primary btn-lg ${processing ? 'btn-loading' : ''}`} style={{ flex: 1 }} onClick={placeOfflineOrder} disabled={processing}>
-                  Place Order · {fmt(grandTotal)}
+                  Submit Order · {fmt(grandTotal)}
                 </button>
               </div>
             </div>

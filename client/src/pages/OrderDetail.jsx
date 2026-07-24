@@ -3,9 +3,8 @@ import { useParams, useSearchParams, Link } from 'react-router-dom';
 import api from '../api';
 
 const fmt = (n) => `$${Number(n).toFixed(2)}`;
-const STATUS_LABEL = { pending_payment:'Pending Payment', processing:'Processing', shipped:'Shipped', delivered:'Delivered', cancelled:'Cancelled' };
+const STATUS_LABEL = { pending_approval:'Pending Approval', pending_payment:'Awaiting Payment', processing:'Processing', shipped:'Shipped', delivered:'Delivered', cancelled:'Cancelled' };
 const PAY_LABEL = { card:'Card', zelle:'Zelle', cash:'Cash at pickup' };
-const DEFAULT_ZELLE = 'bsdgaragesupply@gmail.com';
 const DEFAULT_PICKUP = '2634 NE 9th Ave, Cape Coral, FL 33909';
 
 export default function OrderDetail() {
@@ -26,7 +25,7 @@ export default function OrderDetail() {
   const isPickup = order.shipping_method === 'Local Pickup' || !order.shipping_address;
   const unpaid = order.payment_status !== 'paid';
   const offline = order.payment_method === 'zelle' || order.payment_method === 'cash';
-  const zelleRecipient = config.zelleRecipient || DEFAULT_ZELLE;
+  const pendingApproval = order.status === 'pending_approval';
   const pickupAddress = config.pickupAddress || DEFAULT_PICKUP;
   const justPlaced = params.get('placed') === '1' || params.get('success') === '1';
 
@@ -54,30 +53,43 @@ export default function OrderDetail() {
       <div className="container section-sm">
         {justPlaced && (
           <div className="alert alert-success no-print" style={{marginBottom:'20px'}}>
-            ✅ Your order has been placed! {offline && unpaid ? 'See the payment instructions below to complete it.' : 'Thank you for your order.'}
+            {pendingApproval
+              ? "✅ Your order has been submitted! We'll review it and email your invoice shortly."
+              : offline && unpaid
+                ? '✅ Your order is approved — see the payment instructions below.'
+                : '✅ Your order has been placed! Thank you for your order.'}
           </div>
         )}
 
-        {/* Payment instructions for unpaid Zelle / cash orders */}
-        {offline && unpaid && (
+        {/* Pending owner approval — no payment details yet */}
+        {offline && pendingApproval && (
+          <div className="card no-print" style={{marginBottom:'24px', border:'2px solid var(--gold)'}}>
+            <div className="card-header"><h3 style={{fontWeight:700}}>⏳ Pending Approval</h3></div>
+            <div className="card-body">
+              <p style={{margin:0, fontSize:'15px', lineHeight:1.6}}>
+                Thanks for your order! We're reviewing it now. You'll receive an invoice by email once it's approved,
+                with instructions to pay by {(PAY_LABEL[order.payment_method] || '').toLowerCase()}.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Invoice / payment instructions once the order is approved (still unpaid) */}
+        {offline && unpaid && !pendingApproval && (
           <div className="card" style={{marginBottom:'24px', border:'2px solid var(--gold)'}}>
-            <div className="card-header"><h3 style={{fontWeight:700}}>🧾 Payment Required — {PAY_LABEL[order.payment_method]}</h3></div>
+            <div className="card-header"><h3 style={{fontWeight:700}}>🧾 Invoice — {PAY_LABEL[order.payment_method]}</h3></div>
             <div className="card-body">
               {order.payment_method === 'zelle' ? (
                 <>
-                  <p style={{margin:'0 0 8px', fontSize:'15px'}}>Send <strong>{fmt(order.total)}</strong> via <strong>Zelle</strong> to:</p>
-                  <div className="invoice-pay-highlight">{zelleRecipient}</div>
-                  <p style={{margin:'10px 0 0', fontSize:'13px', color:'var(--text-secondary)'}}>
-                    Put your order number <strong>{order.order_number}</strong> in the Zelle memo so we can match your payment.
+                  <p style={{margin:'0 0 8px', fontSize:'15px'}}>Amount due: <strong style={{fontSize:'18px', color:'var(--gold-dark)'}}>{fmt(order.total)}</strong></p>
+                  <p style={{margin:0, fontSize:'14px', color:'var(--text-secondary)'}}>
+                    Please send this amount by <strong>Zelle</strong> and put your order number <strong>{order.order_number}</strong> in the memo so we can match your payment.
                   </p>
                 </>
               ) : (
                 <>
                   <p style={{margin:'0 0 8px', fontSize:'15px'}}>Bring <strong>{fmt(order.total)}</strong> in cash when you pick up your order at:</p>
                   <div className="invoice-pay-highlight">{pickupAddress}</div>
-                  <p style={{margin:'10px 0 0', fontSize:'13px', color:'var(--text-secondary)'}}>
-                    We'll have your order ready. We'll mark it paid once you pick up.
-                  </p>
                 </>
               )}
             </div>

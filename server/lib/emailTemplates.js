@@ -116,17 +116,15 @@ function orderConfirmation(order, items) {
 // ── Invoice for unpaid Zelle / cash orders (to customer) ─────────────────────
 function orderInvoice(order, items, opts = {}) {
   const method = order.payment_method === 'cash' ? 'Cash' : 'Zelle';
-  const zelle = opts.zelleRecipient || 'bsdgaragesupply@gmail.com';
   const pickup = opts.pickupAddress || '2634 NE 9th Ave, Cape Coral, FL 33909';
   const instructions = order.payment_method === 'cash'
     ? `<p style="margin:0 0 6px;font-size:15px;color:#333;">Please bring <strong>${money(order.total)}</strong> in cash when you pick up your order at:</p>
        <p style="margin:0;font-size:15px;color:#333;"><strong>${pickup}</strong></p>`
-    : `<p style="margin:0 0 6px;font-size:15px;color:#333;">Send <strong>${money(order.total)}</strong> via <strong>Zelle</strong> to:</p>
-       <p style="margin:0 0 6px;font-size:18px;font-weight:800;color:${GOLD};">${zelle}</p>
-       <p style="margin:0;font-size:13px;color:#666;">Put your order number <strong>${order.order_number}</strong> in the memo so we can match your payment.</p>`;
+    : `<p style="margin:0 0 6px;font-size:15px;color:#333;">Amount due: <strong style="font-size:18px;color:${GOLD};">${money(order.total)}</strong></p>
+       <p style="margin:0;font-size:14px;color:#333;">Please send this amount by <strong>Zelle</strong> and put your order number <strong>${order.order_number}</strong> in the memo so we can match your payment.</p>`;
   const body = `
-    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;">Invoice — payment required 🧾</h1>
-    <p style="margin:0 0 4px;font-size:15px;color:#444;">Thanks for your order! It's reserved and waiting for payment.</p>
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;">Your invoice 🧾</h1>
+    <p style="margin:0 0 4px;font-size:15px;color:#444;">Your order is approved and reserved — here's your invoice.</p>
     <p style="margin:0 0 20px;font-size:14px;color:#888;">Order <strong style="color:${GOLD};">${order.order_number}</strong> &nbsp;·&nbsp; <span style="color:#c0392b;font-weight:700;">UNPAID</span></p>
     ${itemsTable(items)}
     ${totalsTable(order)}
@@ -136,7 +134,7 @@ function orderInvoice(order, items, opts = {}) {
     </div>
     ${button('View Invoice', SITE_URL + '/orders/' + order.id)}
     <p style="margin:6px 0 0;font-size:13px;color:#888;">Once we receive your ${method.toLowerCase()} payment we'll mark your order paid and get it ready for pickup.</p>`;
-  return { subject: `Invoice ${order.order_number} — payment required (${money(order.total)})`, html: layout('Invoice', body) };
+  return { subject: `Invoice ${order.order_number} — ${money(order.total)} due`, html: layout('Invoice', body) };
 }
 
 // ── New order alert (to admin/owner) ─────────────────────────────────────────

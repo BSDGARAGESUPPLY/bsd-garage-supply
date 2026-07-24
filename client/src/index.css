@@ -184,6 +184,7 @@ h1, h2, h3, h4 { letter-spacing: -0.02em; line-height: 1.12; font-weight: 700; c
 .badge-accent { background: var(--gold); color: #2a1f08; font-weight: 700; }
 
 /* ── Status badges ── */
+.status-pending_approval { background: #efe4c7; color: #7a5c12; }
 .status-pending_payment { background: var(--warning-bg); color: #946300; }
 .status-processing { background: var(--info-bg); color: #1f5a96; }
 .status-shipped { background: #dceaf7; color: #1f5a96; }

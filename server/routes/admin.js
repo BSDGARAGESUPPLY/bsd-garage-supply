@@ -181,8 +181,51 @@ router.put('/orders/:id', (req, res) => {
   res.json({ ...order, items });
 });
 
+// Approve a pending Zelle / cash order: reserve stock and email the invoice to the customer.
+router.put('/orders/:id/approve', (req, res) => {
+  const order = db.prepare(`
+    SELECT o.*, u.email AS customer_email, u.company_name, u.contact_name, u.phone
+    FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = ?
+  `).get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (order.status !== 'pending_approval') return res.status(400).json({ error: 'This order is not awaiting approval.' });
+
+  const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
+
+  // Make sure everything is still in stock before we reserve it.
+  for (const item of items) {
+    const p = db.prepare('SELECT name, stock_qty FROM products WHERE id = ?').get(item.product_id);
+    if (p && p.stock_qty < item.quantity) {
+      return res.status(400).json({ error: `Not enough stock for ${p.name} (need ${item.quantity}, have ${p.stock_qty}).` });
+    }
+  }
+
+  db.exec('BEGIN');
+  try {
+    for (const item of items) {
+      db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?').run(item.quantity, item.product_id);
+    }
+    db.prepare(`UPDATE orders SET status='pending_payment', updated_at=datetime('now') WHERE id=?`).run(order.id);
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    return res.status(500).json({ error: err.message });
+  }
+
+  // Email the invoice to the customer now that it's approved.
+  try {
+    const updated = db.prepare('SELECT * FROM orders WHERE id=?').get(order.id);
+    const inv = templates.orderInvoice({ ...updated, customer_email: order.customer_email }, items);
+    sendMail({ to: order.customer_email, subject: inv.subject, html: inv.html });
+  } catch (err) {
+    console.error('Invoice email error:', err.message);
+  }
+
+  res.json(db.prepare('SELECT * FROM orders WHERE id=?').get(order.id));
+});
+
 // Mark an offline (Zelle / cash) order as paid or back to unpaid.
-// Stock was already reserved when the order was placed, so this is a status flip.
+// Stock was already reserved on approval, so this is a status flip.
 router.put('/orders/:id/paid', (req, res) => {
   const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });

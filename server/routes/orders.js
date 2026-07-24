@@ -6,19 +6,15 @@ const { fulfillOrder } = require('../lib/fulfillment');
 const { sendMail, ADMIN_EMAIL } = require('../lib/mailer');
 const templates = require('../lib/emailTemplates');
 
-// Where offline payments go. Zelle recipient is configurable; pickup is fixed for now.
-const ZELLE_RECIPIENT = process.env.ZELLE_RECIPIENT || 'bsdgaragesupply@gmail.com';
-const PICKUP_ADDRESS = '2634 NE 9th Ave, Cape Coral, FL 33909';
-
 const generateOrderNumber = () => {
   const ts = Date.now().toString(36).toUpperCase();
   const rand = Math.random().toString(36).substring(2, 5).toUpperCase();
   return `BSD-${ts}-${rand}`;
 };
 
-// Send the "invoice + how to pay" email to the customer and an alert to the owner.
-// Used for Zelle / cash orders, which are placed unpaid and settled offline.
-function sendUnpaidOrderEmails(orderId) {
+// Zelle / cash orders come in as requests that need the owner's approval before
+// the customer is invoiced. On placement we only alert the owner — no client email.
+function sendOwnerApprovalAlert(orderId) {
   try {
     const order = db.prepare(`
       SELECT o.*, u.email AS customer_email, u.company_name, u.contact_name, u.phone
@@ -26,13 +22,11 @@ function sendUnpaidOrderEmails(orderId) {
     `).get(orderId);
     if (!order) return;
     const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId);
-    const inv = templates.orderInvoice(order, items, { zelleRecipient: ZELLE_RECIPIENT, pickupAddress: PICKUP_ADDRESS });
-    sendMail({ to: order.customer_email, subject: inv.subject, html: inv.html });
     const customer = { company_name: order.company_name, contact_name: order.contact_name, email: order.customer_email, phone: order.phone };
     const alert = templates.newOrderAdmin(order, items, customer);
     sendMail({ to: ADMIN_EMAIL, subject: alert.subject, html: alert.html });
   } catch (err) {
-    console.error('Invoice email error:', err.message);
+    console.error('Owner alert email error:', err.message);
   }
 }
 
@@ -70,17 +64,19 @@ router.post('/', authenticate, requireApproved, (req, res) => {
   const total = parseFloat((subtotal + shippingCost + tax).toFixed(2));
   const orderNumber = generateOrderNumber();
 
-  // Card is paid online after this step; Zelle/cash are placed unpaid and settled offline.
+  // Card is paid online right after this step. Zelle/cash are submitted as requests
+  // that wait for the owner's approval before the customer is invoiced.
   const paymentStatus = method === 'card' ? 'pending' : 'unpaid';
+  const status = method === 'card' ? 'pending_payment' : 'pending_approval';
 
   try {
     db.exec('BEGIN');
     const orderResult = db.prepare(`
-      INSERT INTO orders (order_number, user_id, subtotal, shipping_cost, tax, total,
+      INSERT INTO orders (order_number, user_id, status, subtotal, shipping_cost, tax, total,
         shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip,
         shipping_method, payment_method, payment_status, notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(orderNumber, req.user.id, subtotal, shippingCost, tax, total,
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(orderNumber, req.user.id, status, subtotal, shippingCost, tax, total,
       name, shipping_address || null, shipping_city || null, shipping_state || null, shipping_zip || null,
       shippingMethod, method, paymentStatus, notes || null);
 
@@ -92,17 +88,14 @@ router.post('/', authenticate, requireApproved, (req, res) => {
       `).run(orderId, item.product_id, item.quantity, item.price, item.price * item.quantity, item.name, item.sku);
     }
 
-    // Zelle/cash: the order is placed now — reserve stock and empty the cart.
-    // (Card reserves stock only once payment succeeds, via fulfillOrder.)
+    // Zelle/cash: the request is submitted now — empty the cart. Stock is reserved
+    // only once the owner approves it (card reserves on payment success via fulfillOrder).
     if (method !== 'card') {
-      for (const item of cartItems) {
-        db.prepare('UPDATE products SET stock_qty = stock_qty - ? WHERE id = ?').run(item.quantity, item.product_id);
-      }
       db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(req.user.id);
     }
     db.exec('COMMIT');
 
-    if (method !== 'card') sendUnpaidOrderEmails(orderId);
+    if (method !== 'card') sendOwnerApprovalAlert(orderId);
 
     res.status(201).json({ order_id: orderId, order_number: orderNumber, total, payment_method: method });
   } catch (err) {
