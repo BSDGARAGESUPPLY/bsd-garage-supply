@@ -61,7 +61,13 @@ router.post('/', authenticate, requireApproved, (req, res) => {
   // Florida sales tax on the product subtotal. Rate is configurable via SALES_TAX_PERCENT.
   const TAX_PERCENT = parseFloat(process.env.SALES_TAX_PERCENT || '6.5');
   const tax = parseFloat((subtotal * TAX_PERCENT / 100).toFixed(2));
-  const total = parseFloat((subtotal + shippingCost + tax).toFixed(2));
+  // Card processing fee (Stripe) passed on to card payers only — Zelle/cash are fee-free.
+  const FEE_PERCENT = parseFloat(process.env.CARD_FEE_PERCENT || '2.9');
+  const FEE_FIXED = parseFloat(process.env.CARD_FEE_FIXED || '0.30');
+  const cardFee = method === 'card'
+    ? parseFloat(((subtotal + shippingCost + tax) * FEE_PERCENT / 100 + FEE_FIXED).toFixed(2))
+    : 0;
+  const total = parseFloat((subtotal + shippingCost + tax + cardFee).toFixed(2));
   const orderNumber = generateOrderNumber();
 
   // Card is paid online right after this step. Zelle/cash are submitted as requests
@@ -72,11 +78,11 @@ router.post('/', authenticate, requireApproved, (req, res) => {
   try {
     db.exec('BEGIN');
     const orderResult = db.prepare(`
-      INSERT INTO orders (order_number, user_id, status, subtotal, shipping_cost, tax, total,
+      INSERT INTO orders (order_number, user_id, status, subtotal, shipping_cost, tax, card_fee, total,
         shipping_name, shipping_address, shipping_city, shipping_state, shipping_zip,
         shipping_method, payment_method, payment_status, notes)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(orderNumber, req.user.id, status, subtotal, shippingCost, tax, total,
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(orderNumber, req.user.id, status, subtotal, shippingCost, tax, cardFee, total,
       name, shipping_address || null, shipping_city || null, shipping_state || null, shipping_zip || null,
       shippingMethod, method, paymentStatus, notes || null);
 

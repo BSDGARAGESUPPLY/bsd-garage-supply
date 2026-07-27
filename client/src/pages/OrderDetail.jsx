@@ -149,6 +149,7 @@ export default function OrderDetail() {
                   <div style={{display:'flex', justifyContent:'space-between'}}><span>Total Weight</span><span>{Number(order.total_weight || 0).toFixed(1)} lbs</span></div>
                   <div style={{display:'flex', justifyContent:'space-between'}}><span>{isPickup ? 'Pickup' : `Shipping (${order.shipping_method})`}</span><span>{order.shipping_cost > 0 ? fmt(order.shipping_cost) : <span className="text-success">FREE</span>}</span></div>
                   {order.tax > 0 && <div style={{display:'flex', justifyContent:'space-between'}}><span>Sales Tax</span><span>{fmt(order.tax)}</span></div>}
+                  {order.card_fee > 0 && <div style={{display:'flex', justifyContent:'space-between'}}><span>Card processing fee</span><span>{fmt(order.card_fee)}</span></div>}
                   <div style={{display:'flex', justifyContent:'space-between'}}><span>Payment</span><span>{PAY_LABEL[order.payment_method] || 'Card'}</span></div>
                   <hr className="divider" style={{margin:'4px 0'}}/>
                   <div style={{display:'flex', justifyContent:'space-between', fontSize:'18px', fontWeight:800}}><span>Total</span><span style={{color:'var(--gold-dark)'}}>{fmt(order.total)}</span></div>

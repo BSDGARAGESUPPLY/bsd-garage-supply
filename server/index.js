@@ -32,6 +32,8 @@ app.get('/api/config', (req, res) => {
   res.json({
     stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.VITE_STRIPE_PUBLIC_KEY || '',
     taxPercent: parseFloat(process.env.SALES_TAX_PERCENT || '6.5'),
+    cardFeePercent: parseFloat(process.env.CARD_FEE_PERCENT || '2.9'),
+    cardFeeFixed: parseFloat(process.env.CARD_FEE_FIXED || '0.30'),
     zelleRecipient: process.env.ZELLE_RECIPIENT || 'bsdgaragesupply@gmail.com',
     pickupAddress: '2634 NE 9th Ave, Cape Coral, FL 33909'
   });

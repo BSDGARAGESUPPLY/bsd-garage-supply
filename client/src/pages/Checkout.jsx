@@ -96,11 +96,18 @@ function CheckoutFlow({ stripePromise, config }) {
   const [error, setError] = useState('');
 
   const taxPercent = config.taxPercent || 0;
+  const cardFeePercent = config.cardFeePercent || 0;
+  const cardFeeFixed = config.cardFeeFixed || 0;
   const pickupAddress = config.pickupAddress || DEFAULT_PICKUP;
 
+  const round2 = (n) => Math.round(n * 100) / 100;
   const totalWeight = cart.items.reduce((sum, i) => sum + (i.weight || 1) * i.quantity, 0);
-  const tax = cart.subtotal * (taxPercent / 100);
-  const grandTotal = cart.subtotal + tax; // pickup — no shipping charge
+  // Round each line the same way the server does, so the displayed lines always add up.
+  const tax = round2(cart.subtotal * (taxPercent / 100));
+  const baseTotal = cart.subtotal + tax; // pickup — no shipping charge
+  // Card processing fee is only added when paying by card (Zelle/cash are fee-free).
+  const cardFee = method === 'card' ? round2(baseTotal * (cardFeePercent / 100) + cardFeeFixed) : 0;
+  const grandTotal = round2(cart.subtotal + tax + cardFee);
 
   // Create the order server-side. Returns order_id, or null on error.
   const createOrder = async (pm) => {
@@ -252,10 +259,16 @@ function CheckoutFlow({ stripePromise, config }) {
               <div className="checkout-total-row"><span>Total Weight</span><span>{totalWeight.toFixed(1)} lbs</span></div>
               <div className="checkout-total-row"><span>Pickup</span><span className="text-success">FREE</span></div>
               <div className="checkout-total-row"><span>Sales Tax (FL {taxPercent}%)</span><span>{fmt(tax)}</span></div>
+              {method === 'card' && cardFee > 0 && (
+                <div className="checkout-total-row"><span>Card processing fee ({cardFeePercent}% + {fmt(cardFeeFixed)})</span><span>{fmt(cardFee)}</span></div>
+              )}
               <div className="checkout-total-row checkout-total-main">
                 <span>Total</span>
                 <span>{fmt(grandTotal)}</span>
               </div>
+              {method !== 'card' && cardFeePercent > 0 && (
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>Paying by card adds a {cardFeePercent}% + {fmt(cardFeeFixed)} processing fee. Zelle & cash are fee-free.</p>
+              )}
             </div>
           </div>
         </div>

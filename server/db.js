@@ -123,6 +123,8 @@ try { db.exec("ALTER TABLE users ADD COLUMN price_tier TEXT"); } catch { /* alre
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'card'"); } catch { /* already exists */ }
 // Track whether an order's stock has been reserved, so we never double-decrement.
 try { db.exec("ALTER TABLE orders ADD COLUMN stock_reserved INTEGER DEFAULT 0"); } catch { /* already exists */ }
+// Card processing fee passed on to the customer (0 for Zelle/cash).
+try { db.exec("ALTER TABLE orders ADD COLUMN card_fee REAL DEFAULT 0"); } catch { /* already exists */ }
 
 // Run-once helper.
 function once(key, fn) {
