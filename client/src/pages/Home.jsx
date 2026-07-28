@@ -127,6 +127,18 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Our warehouse */}
+      <section className="container">
+        <div className="showroom">
+          <img src="/warehouse.jpg" alt="Inside the BSD Garage Supply warehouse in Cape Coral, FL — racks stocked with torsion springs and hardware" loading="lazy" />
+          <div className="showroom-overlay">
+            <span className="showroom-eyebrow">Our Cape Coral warehouse</span>
+            <h2>Real inventory, ready to ship</h2>
+            <p>Thousands of torsion springs and hardware in stock — pulled, packed, and out the door fast.</p>
+          </div>
+        </div>
+      </section>
+
       {/* Promo banner */}
       <section className="container">
         <div className="promo-banner">
