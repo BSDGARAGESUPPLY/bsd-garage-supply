@@ -38,13 +38,22 @@ export default function ProductDetail() {
   if (!product) return null;
 
   const hasVariants = product.variants && product.variants.length > 1;
-  const active = hasVariants ? product.variants.find(v => v.id === activeId) : null;
+  const leftV = hasVariants ? product.variants.find(v => v.wind?.includes('Left')) : null;
+  const rightV = hasVariants ? product.variants.find(v => v.wind?.includes('Right')) : null;
+  const canPair = !!(leftV && rightV);
+  const isPair = activeId === 'pair';
+  const active = hasVariants && !isPair ? product.variants.find(v => v.id === activeId) : null;
 
   const title = product.pair_name || product.name;
-  const displayPrice = active ? active.price : product.price;
-  const displayStock = active ? active.stock_qty : product.stock_qty;
-  const displaySku = active ? active.sku : product.sku;
-  const displayWeight = active ? active.weight : product.weight;
+  const displayPrice = isPair
+    ? (leftV.price != null && rightV.price != null ? leftV.price + rightV.price : null)
+    : active ? active.price : product.price;
+  const displayStock = isPair ? Math.min(leftV.stock_qty, rightV.stock_qty)
+    : active ? active.stock_qty : product.stock_qty;
+  const displaySku = isPair ? `${leftV.sku} + ${rightV.sku}`
+    : active ? active.sku : product.sku;
+  const displayWeight = isPair ? (Number(leftV.weight || 0) + Number(rightV.weight || 0))
+    : active ? active.weight : product.weight;
   const cartId = active ? active.id : product.id;
 
   const specs = { ...(product.specifications || {}), ...(active ? { 'Wind Direction': active.wind } : {}) };
@@ -54,7 +63,13 @@ export default function ProductDetail() {
     if (!isApproved) { navigate('/login'); return; }
     setAdding(true);
     try {
-      await addToCart(cartId, qty);
+      if (isPair) {
+        // A pair adds one of each wind direction (Red/Left + Black/Right).
+        await addToCart(leftV.id, qty);
+        await addToCart(rightV.id, qty);
+      } else {
+        await addToCart(cartId, qty);
+      }
       setAdded(true);
       document.getElementById('cart-sidebar').classList.add('open');
       setTimeout(() => setAdded(false), 2000);
@@ -102,18 +117,18 @@ export default function ProductDetail() {
               <Link to={`/catalog?category=${product.category_slug}`} className="pd-category">{product.category_name}</Link>
             )}
             <h1 className="pd-name">{title}</h1>
-            <div className="pd-sku">SKU: {displaySku} {displayWeight ? <span className="pd-weight-inline">· {displayWeight} lbs each</span> : null}</div>
+            <div className="pd-sku">SKU: {displaySku} {displayWeight ? <span className="pd-weight-inline">· {displayWeight} lbs {isPair ? 'per pair' : 'each'}</span> : null}</div>
 
             <div className="pd-stock">
               {displayStock > 0
-                ? <span className="pd-in-stock">✓ In Stock ({displayStock} available)</span>
+                ? <span className="pd-in-stock">✓ In Stock ({displayStock} {isPair ? 'pairs available' : 'available'})</span>
                 : <span className="pd-out-stock">✗ Out of Stock</span>}
             </div>
 
             {/* Pricing */}
             <div className="pd-pricing">
               {isApproved ? (
-                <div className="pd-price-main">{fmt(displayPrice)}</div>
+                <div className="pd-price-main">{fmt(displayPrice)}{isPair && <span className="pd-price-note">for the pair (Red + Black)</span>}</div>
               ) : pending ? (
                 <div className="pd-wholesale-teaser">
                   <span>⏳</span>
@@ -130,7 +145,7 @@ export default function ProductDetail() {
             {/* Cone / wind-direction selector */}
             {hasVariants && (
               <div className="pd-variants">
-                <label className="pd-variant-label">Choose wind direction</label>
+                <label className="pd-variant-label">Choose wind direction — or grab the pair</label>
                 <div className="pd-cone-options">
                   {product.variants.map(v => {
                     const isLeft = v.wind.includes('Left');
@@ -149,6 +164,19 @@ export default function ProductDetail() {
                       </button>
                     );
                   })}
+                  {canPair && (
+                    <button
+                      type="button"
+                      className={`pd-cone ${isPair ? 'selected' : ''}`}
+                      onClick={() => { setActiveId('pair'); setQty(1); }}
+                    >
+                      <span className="pd-cone-swatch pair" />
+                      <span className="pd-cone-text">
+                        <strong>Pair</strong>
+                        <small>Red + Black</small>
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}
