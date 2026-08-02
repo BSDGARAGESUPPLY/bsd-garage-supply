@@ -43,7 +43,7 @@ export default function Contact() {
               <div>
                 <h4>Phone</h4>
                 <a href="tel:+18888444701">1-888-844-4701</a>
-                <p>Mon–Fri, 7am–6pm CT</p>
+                <p>Mon–Sat: 7am–9pm<br />Sun: 8am–7pm CT</p>
               </div>
             </div>
             <div className="contact-info-item">

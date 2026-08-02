@@ -27,7 +27,7 @@ export default function Footer() {
             <div>📞 <a href="tel:+18888444701">1-888-844-4701</a></div>
             <div>✉ <a href="mailto:bsdgaragesupply@gmail.com">Bsdgaragesupply@gmail.com</a></div>
             <div>📍 2634 NE 9th Ave, Cape Coral, FL 33909</div>
-            <div>🕐 Mon–Fri 7am–6pm CT</div>
+            <div>🕐 Mon–Sat 7am–9pm · Sun 8am–7pm CT</div>
           </div>
         </div>
 
