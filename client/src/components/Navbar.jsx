@@ -48,6 +48,7 @@ export default function Navbar() {
             <NavLink to="/catalog" className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>All Products</NavLink>
             <NavLink to="/catalog?category=torsion-springs" className="nav-link" onClick={() => setMenuOpen(false)}>Torsion Springs</NavLink>
             <NavLink to="/catalog?category=brackets-hardware" className="nav-link" onClick={() => setMenuOpen(false)}>Hardware</NavLink>
+            <NavLink to="/spring-engineer" className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>Spring Engineer</NavLink>
             <NavLink to="/about" className="nav-link" onClick={() => setMenuOpen(false)}>About</NavLink>
             <NavLink to="/contact" className="nav-link" onClick={() => setMenuOpen(false)}>Contact</NavLink>
           </div>

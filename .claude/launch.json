@@ -7,6 +7,14 @@
       "runtimeArgs": ["node_modules\\vite\\bin\\vite.js"],
       "cwd": "C:\\Users\\Dvirn\\Desktop\\website foldfer\\client",
       "port": 5173
+    },
+    {
+      "name": "bonita",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "C:\\Users\\Dvirn\\Desktop\\website foldfer\\bonita-springs-garage",
+      "port": 3100,
+      "autoPort": true
     }
   ]
 }
