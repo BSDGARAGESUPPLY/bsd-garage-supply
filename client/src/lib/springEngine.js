@@ -12,11 +12,12 @@
 // springs are under high tension and are safety-critical.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Spring-rate: IPPT(per spring) = IPPT_C * d^IPPT_EXP / ((ID + d) * L)  [in-lb per turn]
-// Exponent + constant calibrated against two ServiceSpring reference cases
-// (150 lb → 0.192"×17.25" and 189 lb → 0.2187"×25.5"), reproducing both lengths.
-const IPPT_C = 2.5169e6;
-const IPPT_EXP = 4.87;
+// Spring-rate: IPPT(per spring) = IPPT_C * d^5 / ((ID + d) * L)  [in-lb per turn]
+// This is the standard physical form (bending stiffness ∝ d^4, active coils = L/d).
+// IPPT_C ≈ E/10.8 (steel), fit across three ServiceSpring reference cases
+// (0.192"×17.25", 0.2187"×25.5", 0.2437"×28.25") — reproduces all three lengths within ~1%.
+const IPPT_C = 3.089e6;
+const IPPT_EXP = 5;
 // Steel density used for spring weight (lb/in^3).
 const RHO = 0.2835;
 // Fatigue: max wire stress for a 10,000-cycle life, and how life scales with stress.
@@ -27,8 +28,8 @@ const LIFE_EXP = 4.28;
 
 // Standard US garage-door torsion wire sizes (inches), smallest → largest.
 export const WIRE_SIZES = [
-  0.177, 0.192, 0.207, 0.2187, 0.225, 0.234, 0.243, 0.250,
-  0.262, 0.273, 0.283, 0.295, 0.3065, 0.319, 0.331, 0.343,
+  0.177, 0.192, 0.207, 0.2187, 0.225, 0.234, 0.2437, 0.250,
+  0.262, 0.273, 0.283, 0.2938, 0.3065, 0.3195, 0.331, 0.3437,
 ];
 
 export const ID_OPTIONS = [
