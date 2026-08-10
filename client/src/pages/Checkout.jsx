@@ -88,7 +88,11 @@ function CardPaymentStep({ amount, onCreateOrder, onBack }) {
 
 function CheckoutFlow({ stripePromise, config }) {
   const navigate = useNavigate();
-  const { cart, clearCart } = useCart();
+  const { cart, clearCart, fetchCart } = useCart();
+
+  // Re-pull the cart on entering checkout so displayed prices reflect any recent
+  // admin price change — the amount shown always equals what the order charges.
+  useEffect(() => { fetchCart(); }, [fetchCart]);
 
   const [method, setMethod] = useState('');   // 'card' | 'zelle' | 'cash'
   const [step, setStep] = useState(1);         // 1 = choose method, 2 = pay / place
