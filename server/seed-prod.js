@@ -80,6 +80,8 @@ function ensureSeed(db) {
     'High-cycle galvanized torsion springs. Format: Wire Dia × ID × Length. Available in Left (L) and Right (R) wind.');
   const catHardware = ensureCat('Brackets & Hardware', 'brackets-hardware',
     'End bearing brackets, center mounts, hinges, and bearings for complete garage door assemblies.');
+  ensureCat('Garage Door Openers', 'garage-door-openers',
+    'Residential and commercial garage door openers, remotes, keypads, and opener accessories.');
 
   // ── Products (only if empty) ──
   const productCount = db.prepare('SELECT COUNT(*) c FROM products').get().c;

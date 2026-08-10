@@ -40,6 +40,13 @@ export default function Home() {
         <path d="M40 58 L40 70 M30 70 L50 70" />
       </svg>
     );
+    if (slug === 'garage-door-openers') return (
+      <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinejoin="round" strokeLinecap="round">
+        <rect x="20" y="30" width="40" height="26" rx="3" /><path d="M30 30 V22 h20 v8" />
+        <circle cx="34" cy="43" r="3.5" fill="currentColor" stroke="none" />
+        <path d="M46 38 h8 M46 43 h8 M46 48 h8" strokeWidth="2.6" />
+      </svg>
+    );
     return (
       <svg viewBox="0 0 80 80" fill="none" stroke="currentColor" strokeWidth="3.2"><circle cx="40" cy="40" r="14" /><path d="M40 14v8M40 58v8M14 40h8M58 40h8M22 22l6 6M52 52l6 6M58 22l-6 6M28 52l-6 6" strokeLinecap="round" /></svg>
     );
