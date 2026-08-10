@@ -12,20 +12,23 @@
 // springs are under high tension and are safety-critical.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Spring-rate constant: IPPT(per spring) = K * d^5 / ((ID + d) * L)   [in-lb per turn]
-const K_IPPT = 3.1146e6;
+// Spring-rate: IPPT(per spring) = IPPT_C * d^IPPT_EXP / ((ID + d) * L)  [in-lb per turn]
+// Exponent + constant calibrated against two ServiceSpring reference cases
+// (150 lb → 0.192"×17.25" and 189 lb → 0.2187"×25.5"), reproducing both lengths.
+const IPPT_C = 2.5169e6;
+const IPPT_EXP = 4.87;
 // Steel density used for spring weight (lb/in^3).
 const RHO = 0.2835;
-// Stress→cycle-life calibration: 0.192" wire at the reference torque ≈ 11,000 cycles,
-// and roughly doubles per ~22,000 psi of stress relief.
-const CYC_REF_STRESS = 244460;
-const CYC_REF_CYCLES = 11000;
-const CYC_STRESS_PER_DOUBLE = 22000;
+// Fatigue: max wire stress for a 10,000-cycle life, and how life scales with stress.
+// life(stress) = 10000 * (SIGMA_10K / stress)^LIFE_EXP  — calibrated to both cases.
+const SIGMA_10K = 245000;
+const LIFE_REF_CYCLES = 10000;
+const LIFE_EXP = 4.28;
 
 // Standard US garage-door torsion wire sizes (inches), smallest → largest.
 export const WIRE_SIZES = [
-  0.177, 0.192, 0.207, 0.218, 0.225, 0.234, 0.243, 0.250,
-  0.262, 0.273, 0.283, 0.295, 0.306, 0.319, 0.331, 0.343,
+  0.177, 0.192, 0.207, 0.2187, 0.225, 0.234, 0.243, 0.250,
+  0.262, 0.273, 0.283, 0.295, 0.3065, 0.319, 0.331, 0.343,
 ];
 
 export const ID_OPTIONS = [
@@ -69,12 +72,14 @@ export const DRUMS = [
 
 const round1000 = (n) => Math.max(1000, Math.round(n / 1000) * 1000);
 
-// Estimated cycle life for a wire size at a fixed max torque (per spring).
-// Torque is fixed by the door + drum, so a thicker wire → lower stress → more cycles.
-export function cyclesForWire(d, maxTorque) {
-  const rawStress = (32 * maxTorque) / (Math.PI * Math.pow(d, 3));
-  const cyc = CYC_REF_CYCLES * Math.pow(2, (CYC_REF_STRESS - rawStress) / CYC_STRESS_PER_DOUBLE);
-  return round1000(cyc);
+// Bending stress in the wire at full wind (per spring), psi.
+function wireStress(d, maxTorque) {
+  return (32 * maxTorque) / (Math.PI * Math.pow(d, 3));
+}
+// Continuous estimated cycle life for a wire at a fixed max torque (per spring).
+// Torque is fixed by the door + drum, so a thicker wire → lower stress → longer life.
+export function lifeForWire(d, maxTorque) {
+  return LIFE_REF_CYCLES * Math.pow(SIGMA_10K / wireStress(d, maxTorque), LIFE_EXP);
 }
 
 /**
@@ -101,21 +106,18 @@ export function computeSpring(input) {
   const ipptPerSpring = tipptTotal / n;
   const maxTorque = ipptPerSpring * turns;         // per spring at full wind (fixed by door+drum)
 
-  // Smallest standard wire that meets the requested cycle life.
-  let chosen = null;
-  for (const d of WIRE_SIZES) {
-    const cyc = cyclesForWire(d, maxTorque);
-    if (cyc >= targetCycles) { chosen = { d, cyc }; break; }
+  // Smallest standard wire whose estimated life meets the requested cycles.
+  let d = null;
+  for (const w of WIRE_SIZES) {
+    if (lifeForWire(w, maxTorque) >= targetCycles) { d = w; break; }
   }
-  if (!chosen) {
-    const d = WIRE_SIZES[WIRE_SIZES.length - 1];
-    chosen = { d, cyc: cyclesForWire(d, maxTorque) };
-    warnings.push('No standard wire fully meets the requested cycle life — showing the highest-cycle option.');
+  if (d == null) {
+    d = WIRE_SIZES[WIRE_SIZES.length - 1];
+    warnings.push('No standard wire fully meets the requested cycle life — showing the thickest option.');
   }
 
-  const d = chosen.d;
   const meanDia = innerDiameter + d;
-  const springLength = (K_IPPT * Math.pow(d, 5)) / (meanDia * ipptPerSpring);
+  const springLength = (IPPT_C * Math.pow(d, IPPT_EXP)) / (meanDia * ipptPerSpring);
   const springWeight = (Math.PI / 4) * d * d * RHO * (springLength / d) * Math.PI * meanDia;
 
   return {
@@ -126,15 +128,15 @@ export function computeSpring(input) {
     turns,
     tippt: tipptTotal,
     multiplier,
-    cycles: chosen.cyc,
+    cycles: round1000(lifeForWire(d, maxTorque)),
     ipptPerSpring,
     numberOfSprings: n,
     warnings,
   };
 }
 
-// Format a wire size the way the catalog stores it, e.g. 0.192 -> ".192\""
-export const fmtWire = (d) => `.${String(Math.round(d * 1000)).padStart(3, '0')}"`;
+// Format a wire size as its decimal, e.g. 0.192 -> ".192\"", 0.2187 -> ".2187\""
+export const fmtWire = (d) => `${d.toFixed(4).replace(/0+$/, '').replace(/^0/, '')}"`;
 
 // Parse a spec string like ".225\"" or "2\"" or "25\"" to a number.
 const specNum = (s) => parseFloat(String(s || '').replace(/[^0-9.]/g, ''));
