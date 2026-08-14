@@ -260,6 +260,38 @@ router.put('/orders/:id/paid', (req, res) => {
   res.json(db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.id));
 });
 
+// Inventory value report — units on hand and what they're worth if all sold.
+router.get('/inventory/summary', (req, res) => {
+  const products = db.prepare(`
+    SELECT p.id, p.name, p.sku, p.stock_qty, p.min_stock_alert,
+           p.wholesale_price, p.retail_price, c.name AS category_name
+    FROM products p LEFT JOIN categories c ON p.category_id = c.id
+    WHERE p.is_active = 1
+    ORDER BY c.name, p.name
+  `).all();
+
+  const summary = { product_count: products.length, in_stock_count: 0, out_of_stock: 0,
+    total_units: 0, value_tech: 0, value_retail: 0 };
+  const byCategory = {};
+  for (const p of products) {
+    summary.total_units += p.stock_qty;
+    summary.value_tech += p.stock_qty * p.wholesale_price;
+    summary.value_retail += p.stock_qty * p.retail_price;
+    if (p.stock_qty > 0) summary.in_stock_count++; else summary.out_of_stock++;
+    const cat = p.category_name || 'Uncategorized';
+    byCategory[cat] = byCategory[cat] || { category: cat, units: 0, value_tech: 0, value_retail: 0, skus: 0 };
+    byCategory[cat].units += p.stock_qty;
+    byCategory[cat].value_tech += p.stock_qty * p.wholesale_price;
+    byCategory[cat].value_retail += p.stock_qty * p.retail_price;
+    byCategory[cat].skus++;
+  }
+  const round2 = (n) => Math.round(n * 100) / 100;
+  summary.value_tech = round2(summary.value_tech);
+  summary.value_retail = round2(summary.value_retail);
+  const categories = Object.values(byCategory).map(c => ({ ...c, value_tech: round2(c.value_tech), value_retail: round2(c.value_retail) }));
+  res.json({ summary, categories, products });
+});
+
 // Low stock report
 router.get('/inventory/low-stock', (req, res) => {
   const products = db.prepare(`
