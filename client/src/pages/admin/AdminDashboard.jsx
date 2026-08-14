@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../../api';
 
 const fmt = (n) => `$${Number(n || 0).toFixed(2)}`;
+const money = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const STATUS_COLORS = { pending_payment:'#f59e0b', processing:'#3b82f6', shipped:'#0ea5e9', delivered:'#22c55e', cancelled:'#ef4444' };
 
 export default function AdminDashboard() {
@@ -28,6 +29,7 @@ export default function AdminDashboard() {
           { icon: '🛒', value: stats?.totalOrders, label: 'Total Orders', sub: 'All time' },
           { icon: '👥', value: stats?.pendingApprovals, label: 'Pending Approvals', sub: <Link to="/admin/customers?status=pending" style={{color:'var(--accent)'}}>Review now →</Link> },
           { icon: '⚠️', value: stats?.lowStock, label: 'Low Stock Alerts', sub: <Link to="/admin/inventory" style={{color:'var(--accent)'}}>View inventory →</Link> },
+          { icon: '📦', value: money(stats?.inventoryValueRetail), label: 'Inventory Value (Retail)', sub: <Link to="/admin/inventory" style={{color:'var(--accent)'}}>{Number(stats?.inventoryUnits || 0).toLocaleString()} units in stock →</Link> },
         ].map(s => (
           <div key={s.label} className="admin-stat-card">
             <div className="admin-stat-icon">{s.icon}</div>

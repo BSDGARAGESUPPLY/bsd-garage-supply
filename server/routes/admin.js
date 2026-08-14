@@ -12,6 +12,15 @@ router.get('/stats', (req, res) => {
   const totalOrders = db.prepare(`SELECT COUNT(*) as val FROM orders`).get().val;
   const pendingApprovals = db.prepare(`SELECT COUNT(*) as val FROM users WHERE status='pending'`).get().val;
   const lowStock = db.prepare(`SELECT COUNT(*) as val FROM products WHERE stock_qty <= min_stock_alert AND is_active=1`).get().val;
+  const inv = db.prepare(`
+    SELECT COALESCE(SUM(stock_qty),0) AS units,
+           COALESCE(SUM(stock_qty * retail_price),0) AS value_retail,
+           COALESCE(SUM(stock_qty * wholesale_price),0) AS value_tech
+    FROM products WHERE is_active=1
+  `).get();
+  const inventoryUnits = inv.units;
+  const inventoryValueRetail = Math.round(inv.value_retail * 100) / 100;
+  const inventoryValueTech = Math.round(inv.value_tech * 100) / 100;
   const recentOrders = db.prepare(`
     SELECT o.*, u.company_name FROM orders o JOIN users u ON o.user_id=u.id
     ORDER BY o.created_at DESC LIMIT 10
@@ -20,7 +29,8 @@ router.get('/stats', (req, res) => {
     SELECT COALESCE(SUM(total),0) as val FROM orders
     WHERE payment_status='paid' AND created_at >= date('now','-30 days')
   `).get().val;
-  res.json({ totalRevenue, totalOrders, pendingApprovals, lowStock, recentOrders, monthRevenue });
+  res.json({ totalRevenue, totalOrders, pendingApprovals, lowStock, recentOrders, monthRevenue,
+    inventoryUnits, inventoryValueRetail, inventoryValueTech });
 });
 
 // Products CRUD
