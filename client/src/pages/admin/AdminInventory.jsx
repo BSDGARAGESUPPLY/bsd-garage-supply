@@ -35,15 +35,15 @@ export default function AdminInventory() {
   const cards = s ? [
     { label: 'Products in stock', value: `${num(s.in_stock_count)} / ${num(s.product_count)}`, sub: `${num(s.out_of_stock)} out of stock` },
     { label: 'Total units on hand', value: num(s.total_units), sub: 'across all products' },
-    { label: 'Value if sold — Retail', value: fmt(s.value_retail), sub: 'at retail (client) prices', gold: true },
-    { label: 'Value at cost — Tech', value: fmt(s.value_tech), sub: 'at tech (wholesale) prices' },
+    { label: 'Inventory Value (Tech)', value: fmt(s.value_tech), sub: 'at your tech / cost prices', gold: true },
+    { label: 'If sold at retail', value: fmt(s.value_retail), sub: 'retail (client) prices' },
   ] : [];
 
   return (
     <div className="admin-page">
       <div className="admin-page-header">
         <h1>Inventory &amp; Value</h1>
-        {s && <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{num(s.total_units)} units · {fmt(s.value_retail)} retail</span>}
+        {s && <span style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{num(s.total_units)} units · {fmt(s.value_tech)} value</span>}
       </div>
 
       {loading ? <div className="loading-center"><div className="spinner" /></div> : (
@@ -65,15 +65,15 @@ export default function AdminInventory() {
               <div className="card-header"><h3 style={{ fontWeight: 700 }}>By category</h3></div>
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Category</th><th>SKUs</th><th>Units</th><th>Value (Retail)</th><th>Value (Tech)</th></tr></thead>
+                  <thead><tr><th>Category</th><th>SKUs</th><th>Units</th><th>Value (Tech)</th><th>Value (Retail)</th></tr></thead>
                   <tbody>
                     {data.categories.map(c => (
                       <tr key={c.category}>
                         <td><strong style={{ fontSize: '13px' }}>{c.category}</strong></td>
                         <td>{num(c.skus)}</td>
                         <td>{num(c.units)}</td>
-                        <td style={{ fontWeight: 700 }}>{fmt(c.value_retail)}</td>
-                        <td style={{ color: 'var(--text-secondary)' }}>{fmt(c.value_tech)}</td>
+                        <td style={{ fontWeight: 700 }}>{fmt(c.value_tech)}</td>
+                        <td style={{ color: 'var(--text-secondary)' }}>{fmt(c.value_retail)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -99,7 +99,7 @@ export default function AdminInventory() {
                 </div>
               ) : (
                 <table>
-                  <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Tech</th><th>Retail</th><th>Value (Retail)</th><th>Update</th></tr></thead>
+                  <thead><tr><th>Product</th><th>SKU</th><th>Stock</th><th>Tech</th><th>Retail</th><th>Value (Tech)</th><th>Update</th></tr></thead>
                   <tbody>
                     {rows.map(p => {
                       const low = p.stock_qty <= p.min_stock_alert;
@@ -111,7 +111,7 @@ export default function AdminInventory() {
                           <td><strong style={{ color, fontSize: '15px' }}>{num(p.stock_qty)}</strong></td>
                           <td style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{fmt(p.wholesale_price)}</td>
                           <td style={{ fontSize: '13px' }}>{fmt(p.retail_price)}</td>
-                          <td style={{ fontWeight: 700 }}>{fmt(p.stock_qty * p.retail_price)}</td>
+                          <td style={{ fontWeight: 700 }}>{fmt(p.stock_qty * p.wholesale_price)}</td>
                           <td>
                             {editingId === p.id ? (
                               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>

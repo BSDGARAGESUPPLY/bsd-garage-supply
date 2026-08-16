@@ -33,6 +33,35 @@ router.get('/stats', (req, res) => {
     inventoryUnits, inventoryValueRetail, inventoryValueTech });
 });
 
+// Sales report — paid orders grouped by day / week / month, plus period totals.
+router.get('/sales', (req, res) => {
+  const group = ['day', 'week', 'month'].includes(req.query.group) ? req.query.group : 'day';
+  const fmt = group === 'month' ? '%Y-%m' : group === 'week' ? '%Y-%W' : '%Y-%m-%d';
+  const rows = db.prepare(`
+    SELECT strftime('${fmt}', created_at) AS period,
+           MIN(date(created_at)) AS first_date,
+           MAX(date(created_at)) AS last_date,
+           COUNT(*) AS orders,
+           COALESCE(SUM(total), 0) AS revenue
+    FROM orders
+    WHERE payment_status = 'paid'
+    GROUP BY period
+    ORDER BY period DESC
+    LIMIT 200
+  `).all();
+  const t = (cond) => {
+    const r = db.prepare(`SELECT COUNT(*) c, COALESCE(SUM(total),0) v FROM orders WHERE payment_status='paid' AND ${cond}`).get();
+    return { orders: r.c, revenue: Math.round(r.v * 100) / 100 };
+  };
+  const totals = {
+    today:  t("date(created_at) = date('now')"),
+    week:   t("created_at >= date('now','-6 days')"),
+    month:  t("created_at >= date('now','-29 days')"),
+    all:    t("1=1"),
+  };
+  res.json({ group, rows: rows.map(r => ({ ...r, revenue: Math.round(r.revenue * 100) / 100 })), totals });
+});
+
 // Products CRUD
 router.get('/products', (req, res) => {
   const { page = 1, limit = 50, search } = req.query;

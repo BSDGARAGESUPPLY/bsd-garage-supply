@@ -29,7 +29,7 @@ export default function AdminDashboard() {
           { icon: '🛒', value: stats?.totalOrders, label: 'Total Orders', sub: 'All time' },
           { icon: '👥', value: stats?.pendingApprovals, label: 'Pending Approvals', sub: <Link to="/admin/customers?status=pending" style={{color:'var(--accent)'}}>Review now →</Link> },
           { icon: '⚠️', value: stats?.lowStock, label: 'Low Stock Alerts', sub: <Link to="/admin/inventory" style={{color:'var(--accent)'}}>View inventory →</Link> },
-          { icon: '📦', value: money(stats?.inventoryValueRetail), label: 'Inventory Value (Retail)', sub: <Link to="/admin/inventory" style={{color:'var(--accent)'}}>{Number(stats?.inventoryUnits || 0).toLocaleString()} units in stock →</Link> },
+          { icon: '📦', value: money(stats?.inventoryValueTech), label: 'Inventory Value', sub: <Link to="/admin/inventory" style={{color:'var(--accent)'}}>{Number(stats?.inventoryUnits || 0).toLocaleString()} units in stock →</Link> },
         ].map(s => (
           <div key={s.label} className="admin-stat-card">
             <div className="admin-stat-icon">{s.icon}</div>
