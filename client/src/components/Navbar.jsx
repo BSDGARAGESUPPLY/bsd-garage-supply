@@ -49,8 +49,16 @@ export default function Navbar() {
             <NavLink to="/catalog?category=torsion-springs" className="nav-link" onClick={() => setMenuOpen(false)}>Torsion Springs</NavLink>
             <NavLink to="/catalog?category=brackets-hardware" className="nav-link" onClick={() => setMenuOpen(false)}>Hardware</NavLink>
             <NavLink to="/catalog?category=garage-door-openers" className="nav-link" onClick={() => setMenuOpen(false)}>Openers</NavLink>
-            <NavLink to="/catalog?category=new-garage-doors" className="nav-link" onClick={() => setMenuOpen(false)}>Garage Doors</NavLink>
-            <NavLink to="/door-builder" className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>Design a Door</NavLink>
+            <div className="nav-dropdown">
+              <NavLink to="/catalog?category=new-garage-doors" className={({isActive}) => `nav-link nav-dropdown-trigger ${isActive ? 'active' : ''}`} onClick={() => setMenuOpen(false)}>
+                Garage Doors
+                <svg className="nav-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9" /></svg>
+              </NavLink>
+              <div className="nav-dropdown-menu">
+                <NavLink to="/catalog?category=new-garage-doors" className="nav-dropdown-link" onClick={() => setMenuOpen(false)}>🚪 Shop In-Stock Doors</NavLink>
+                <NavLink to="/door-builder" className="nav-dropdown-link" onClick={() => setMenuOpen(false)}>🎨 Design a Door</NavLink>
+              </div>
+            </div>
             <NavLink to="/spring-engineer" className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'} onClick={() => setMenuOpen(false)}>Spring Engineer</NavLink>
             <NavLink to="/about" className="nav-link" onClick={() => setMenuOpen(false)}>About</NavLink>
             <NavLink to="/contact" className="nav-link" onClick={() => setMenuOpen(false)}>Contact</NavLink>

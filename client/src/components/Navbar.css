@@ -31,6 +31,23 @@
 .nav-link:hover { color: #fff; background: rgba(255,255,255,0.07); }
 .nav-link.active { color: var(--gold-light); }
 
+/* Garage Doors dropdown */
+.nav-dropdown { position: relative; }
+.nav-dropdown-trigger { display: inline-flex; align-items: center; gap: 5px; }
+.nav-caret { transition: transform var(--transition-fast); flex-shrink: 0; }
+.nav-dropdown:hover .nav-caret { transform: rotate(180deg); }
+.nav-dropdown-menu {
+  position: absolute; top: 100%; left: 0; min-width: 220px; padding: 8px; z-index: 200;
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  opacity: 0; visibility: hidden; transform: translateY(-8px); transition: all var(--transition-fast);
+}
+.nav-dropdown:hover .nav-dropdown-menu, .nav-dropdown:focus-within .nav-dropdown-menu {
+  opacity: 1; visibility: visible; transform: translateY(0);
+}
+.nav-dropdown-link { display: block; padding: 11px 14px; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--text-secondary); transition: all var(--transition-fast); }
+.nav-dropdown-link:hover { background: var(--bg-alt); color: var(--text-primary); }
+.nav-dropdown-link.active { color: var(--gold-dark); background: var(--gold-bg); }
+
 /* Actions */
 .navbar-actions { display: flex; align-items: center; gap: 10px; }
 
@@ -94,6 +111,16 @@
   }
   .navbar-links.open { display: flex; }
   .nav-link { width: 100%; padding: 13px 16px; }
+  /* Dropdown becomes an inline stacked section on mobile */
+  .nav-dropdown { width: 100%; }
+  .nav-dropdown-trigger { width: 100%; justify-content: space-between; }
+  .nav-dropdown:hover .nav-caret { transform: none; }
+  .nav-dropdown-menu {
+    position: static; opacity: 1; visibility: visible; transform: none;
+    background: transparent; border: none; box-shadow: none; padding: 0 0 4px 14px; min-width: 0;
+  }
+  .nav-dropdown-link { color: var(--on-dark-dim); padding: 11px 16px; }
+  .nav-dropdown-link:hover, .nav-dropdown-link.active { background: rgba(255,255,255,0.07); color: #fff; }
   .hamburger { display: flex; }
   .user-name { display: none; }
   .auth-btns .btn:first-child { display: none; }
