@@ -114,6 +114,8 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT);
+
+  CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT);
 `);
 
 // ── Migrations for existing databases ──────────────────────────────────────

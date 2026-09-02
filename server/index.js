@@ -48,6 +48,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/shipping', require('./routes/shipping'));
 app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/contact', require('./routes/contact'));
+app.use('/api/door-builder', require('./routes/door-builder'));
 
 // Serve static uploads (from the persistent data directory)
 const { UPLOADS_DIR } = require('./config');

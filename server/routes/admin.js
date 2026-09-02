@@ -3,6 +3,7 @@ const db = require('../db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { sendMail } = require('../lib/mailer');
 const templates = require('../lib/emailTemplates');
+const doorConfig = require('../lib/doorConfig');
 
 router.use(authenticate, requireAdmin);
 
@@ -32,6 +33,14 @@ router.get('/stats', (req, res) => {
   res.json({ totalRevenue, totalOrders, pendingApprovals, lowStock, recentOrders, monthRevenue,
     inventoryUnits, inventoryValueRetail, inventoryValueTech });
 });
+
+// Door builder config — read + update the builder's options and prices.
+router.get('/door-builder', (req, res) => res.json(doorConfig.getConfig()));
+router.put('/door-builder', (req, res) => {
+  try { res.json(doorConfig.saveConfig(req.body || {})); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+router.post('/door-builder/reset', (req, res) => res.json(doorConfig.saveConfig(doorConfig.DEFAULT)));
 
 // Sales report — paid orders grouped by day / week / month, plus period totals.
 router.get('/sales', (req, res) => {

@@ -9,6 +9,7 @@ const navItems = [
   { to: '/admin/sales', label: 'Sales', icon: '📈' },
   { to: '/admin/customers', label: 'Customers', icon: '👥' },
   { to: '/admin/inventory', label: 'Inventory', icon: '📋' },
+  { to: '/admin/door-builder', label: 'Door Builder', icon: '🚪' },
 ];
 
 export default function AdminLayout() {

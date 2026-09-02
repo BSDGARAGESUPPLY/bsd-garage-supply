@@ -26,6 +26,7 @@ import AdminOrders from './pages/admin/AdminOrders';
 import AdminSales from './pages/admin/AdminSales';
 import AdminCustomers from './pages/admin/AdminCustomers';
 import AdminInventory from './pages/admin/AdminInventory';
+import AdminDoorBuilder from './pages/admin/AdminDoorBuilder';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
@@ -74,6 +75,7 @@ export default function App() {
           <Route path="sales" element={<AdminSales />} />
           <Route path="customers" element={<AdminCustomers />} />
           <Route path="inventory" element={<AdminInventory />} />
+          <Route path="door-builder" element={<AdminDoorBuilder />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

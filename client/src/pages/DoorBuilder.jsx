@@ -1,68 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import api from '../api';
 import './DoorBuilder.css';
 
 const money = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-// ── Options (estimates — owner can adjust) ───────────────────────────────────
-const OPTIONS = {
-  size: {
-    label: 'Size', type: 'pill',
-    choices: [
-      { id: '8x7', label: `8′ × 7′`, w: 8, h: 7, base: 640 },
-      { id: '9x7', label: `9′ × 7′`, w: 9, h: 7, base: 690 },
-      { id: '10x7', label: `10′ × 7′`, w: 10, h: 7, base: 740 },
-      { id: '9x8', label: `9′ × 8′`, w: 9, h: 8, base: 760 },
-      { id: '16x7', label: `16′ × 7′`, w: 16, h: 7, base: 1160 },
-      { id: '16x8', label: `16′ × 8′`, w: 16, h: 8, base: 1290 },
-      { id: '18x7', label: `18′ × 7′`, w: 18, h: 7, base: 1360 },
-    ],
-  },
-  style: {
-    label: 'Panel Style', type: 'pill',
-    choices: [
-      { id: 'short', label: 'Short Panel', add: 0 },
-      { id: 'long', label: 'Long Panel', add: 0 },
-      { id: 'flush', label: 'Flush', add: 0 },
-      { id: 'carriage', label: 'Carriage House', add: 260 },
-    ],
-  },
-  color: {
-    label: 'Color', type: 'swatch',
-    choices: [
-      { id: 'white', label: 'White', hex: '#f3f3f0', add: 0 },
-      { id: 'almond', label: 'Almond', hex: '#e7ddc6', add: 0 },
-      { id: 'sandstone', label: 'Sandstone', hex: '#d6c6a3', add: 40 },
-      { id: 'clay', label: 'Terra Clay', hex: '#a9603f', add: 60 },
-      { id: 'brown', label: 'Brown', hex: '#5c4030', add: 60 },
-      { id: 'charcoal', label: 'Charcoal', hex: '#3b3e43', add: 60 },
-      { id: 'black', label: 'Black', hex: '#1e1f21', add: 80 },
-    ],
-  },
-  windows: {
-    label: 'Windows', type: 'pill',
-    choices: [
-      { id: 'none', label: 'No Windows', add: 0 },
-      { id: 'plain', label: 'Top Row', add: 190 },
-      { id: 'arched', label: 'Arched', add: 270 },
-      { id: 'cathedral', label: 'Cathedral', add: 320 },
-    ],
-  },
-  insulation: {
-    label: 'Insulation', type: 'pill',
-    choices: [
-      { id: 'none', label: 'Non-Insulated', add: 0 },
-      { id: 'r9', label: 'Insulated · R-9', add: 210 },
-      { id: 'r16', label: 'Premium · R-16', add: 390 },
-    ],
-  },
-  hardware: {
-    label: 'Decorative Hardware', type: 'pill',
-    choices: [
-      { id: 'none', label: 'None', add: 0 },
-      { id: 'carriage', label: 'Handles + Hinges', add: 130 },
-    ],
-  },
+// Static labels/types per option group — the choices + prices come from the API
+// (Admin → Door Builder), so the owner can edit prices without touching code.
+const GROUP_META = {
+  size: { key: 'sizes', label: 'Size', type: 'pill' },
+  style: { key: 'styles', label: 'Panel Style', type: 'pill' },
+  color: { key: 'colors', label: 'Color', type: 'swatch' },
+  windows: { key: 'windows', label: 'Windows', type: 'pill' },
+  insulation: { key: 'insulation', label: 'Insulation', type: 'pill' },
+  hardware: { key: 'hardware', label: 'Decorative Hardware', type: 'pill' },
 };
 
 // ── Door illustration ────────────────────────────────────────────────────────
@@ -175,12 +125,24 @@ export default function DoorBuilder() {
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [lead, setLead] = useState({ name: '', email: '', phone: '', zip: '', notes: '' });
   const [status, setStatus] = useState({ sending: false, done: false, error: '' });
+  const [cfg, setCfg] = useState(null);
+
+  useEffect(() => { api.get('/door-builder/config').then(r => setCfg(r.data)).catch(() => setCfg(false)); }, []);
+
+  // Build the option groups from the fetched config (choices + prices come from admin).
+  const OPTIONS = useMemo(() => {
+    if (!cfg) return {};
+    const o = {};
+    for (const [group, meta] of Object.entries(GROUP_META)) o[group] = { label: meta.label, type: meta.type, choices: cfg[meta.key] || [] };
+    return o;
+  }, [cfg]);
+  const showPrices = cfg ? cfg.showPrices !== false : true;
 
   const chosen = useMemo(() => {
     const o = {};
-    for (const key of Object.keys(OPTIONS)) o[key] = OPTIONS[key].choices.find(c => c.id === sel[key]);
+    for (const key of Object.keys(OPTIONS)) o[key] = (OPTIONS[key].choices.find(c => c.id === sel[key]) || OPTIONS[key].choices[0]);
     return o;
-  }, [sel]);
+  }, [OPTIONS, sel]);
 
   const price = useMemo(() => {
     return (chosen.size?.base || 0) + ['style', 'color', 'windows', 'insulation', 'hardware'].reduce((a, k) => a + (chosen[k]?.add || 0), 0);
@@ -198,12 +160,14 @@ export default function DoorBuilder() {
     e.preventDefault();
     setStatus({ sending: true, done: false, error: '' });
     try {
-      const { data } = await api.post('/contact/door-quote', { ...lead, config: configForEmail, estPrice: price });
+      const { data } = await api.post('/contact/door-quote', { ...lead, config: configForEmail, estPrice: showPrices ? price : null });
       setStatus({ sending: false, done: true, error: '', message: data.message });
     } catch (err) {
       setStatus({ sending: false, done: false, error: err.response?.data?.error || 'Could not send. Please call us at 1-888-844-4701.' });
     }
   };
+
+  if (!cfg) return <div className="loading-center"><div className="spinner" /></div>;
 
   return (
     <div className="db-page">
@@ -221,17 +185,19 @@ export default function DoorBuilder() {
             <DoorPreview ratio={ratio} colorHex={chosen.color?.hex || '#f3f3f0'} style={sel.style} windows={sel.windows} hardware={sel.hardware} />
           </div>
           <div className="db-summary">
-            <div className="db-price">
-              <span className="db-price-label">Estimated from</span>
-              <span className="db-price-value">{money(price)}</span>
-            </div>
+            {showPrices && (
+              <div className="db-price">
+                <span className="db-price-label">Estimated from</span>
+                <span className="db-price-value">{money(price)}</span>
+              </div>
+            )}
             <ul className="db-config">
               {Object.entries(configForEmail).map(([k, v]) => (
                 <li key={k}><span>{k}</span><strong>{v}</strong></li>
               ))}
             </ul>
             <button className="btn btn-primary btn-lg btn-full" onClick={() => { setStatus({ sending: false, done: false, error: '' }); setQuoteOpen(true); }}>Request My Quote →</button>
-            <p className="db-price-note">Estimate only — we'll confirm your exact price in your quote. Free local delivery in Cape Coral, FL.</p>
+            <p className="db-price-note">{showPrices ? "Estimate only — we'll confirm your exact price in your quote. " : 'Design your door and request a free, no-obligation quote. '}Free local delivery in Cape Coral, FL.</p>
           </div>
         </div>
 
@@ -253,7 +219,7 @@ export default function DoorBuilder() {
                   }
                   return (
                     <button key={c.id} className={`db-pill ${active ? 'active' : ''}`} onClick={() => pick(key, c.id)}>
-                      {c.label}{c.add > 0 && <span className="db-add">+{money(c.add)}</span>}
+                      {c.label}{showPrices && c.add > 0 && <span className="db-add">+{money(c.add)}</span>}
                     </button>
                   );
                 })}
@@ -283,7 +249,7 @@ export default function DoorBuilder() {
                   {status.error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{status.error}</div>}
                   <div className="db-quote-config">
                     {Object.entries(configForEmail).map(([k, v]) => <span key={k}><b>{k}:</b> {v}</span>)}
-                    <span className="db-quote-price">Est. {money(price)}</span>
+                    {showPrices && <span className="db-quote-price">Est. {money(price)}</span>}
                   </div>
                   <div className="form-row">
                     <div className="form-group"><label className="form-label required">Name</label>
