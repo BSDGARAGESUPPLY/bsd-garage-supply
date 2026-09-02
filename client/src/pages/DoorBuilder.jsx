@@ -16,7 +16,51 @@ const GROUP_META = {
 };
 
 // ── Door illustration ────────────────────────────────────────────────────────
-function DoorPreview({ ratio, colorHex, style, windows, hardware, dark }) {
+// Lighten (pct>0) or darken (pct<0) a hex color toward white/black.
+function shade(hex, pct) {
+  let h = String(hex || '#f3f3f0').replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  let r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  const t = pct < 0 ? 0 : 255, p = Math.min(1, Math.abs(pct));
+  r = Math.round((t - r) * p + r); g = Math.round((t - g) * p + g); b = Math.round((t - b) * p + b);
+  return `rgb(${r},${g},${b})`;
+}
+
+// A raised, beveled rectangular panel: highlight on top/left, shadow on bottom/right,
+// sitting in a recessed groove — the classic embossed steel short-panel look.
+function raisedPanel(kp, x, y, w, h, color) {
+  const b = Math.max(2.4, Math.min(6, Math.min(w, h) * 0.17));
+  return [
+    <rect key={kp + 'g'} x={x - 1.2} y={y - 1.2} width={w + 2.4} height={h + 2.4} rx="3.5" fill={shade(color, -0.17)} />,
+    <polygon key={kp + 't'} points={`${x},${y} ${x + w},${y} ${x + w - b},${y + b} ${x + b},${y + b}`} fill={shade(color, 0.34)} />,
+    <polygon key={kp + 'l'} points={`${x},${y} ${x + b},${y + b} ${x + b},${y + h - b} ${x},${y + h}`} fill={shade(color, 0.15)} />,
+    <polygon key={kp + 'r'} points={`${x + w},${y} ${x + w},${y + h} ${x + w - b},${y + h - b} ${x + w - b},${y + b}`} fill={shade(color, -0.15)} />,
+    <polygon key={kp + 'bo'} points={`${x},${y + h} ${x + w},${y + h} ${x + w - b},${y + h - b} ${x + b},${y + h - b}`} fill={shade(color, -0.27)} />,
+    <rect key={kp + 'c'} x={x + b} y={y + b} width={w - 2 * b} height={h - 2 * b} rx="1.5" fill={shade(color, 0.05)} />,
+  ];
+}
+
+// A window lite: beveled frame + glass, optionally arched.
+function windowLite(kp, x, y, w, h, arch, cathedral, color) {
+  const b = Math.max(2.2, Math.min(5, Math.min(w, h) * 0.14));
+  const gx = x + b, gy = y + b, gw = w - 2 * b, gh = h - 2 * b, r = gw / 2;
+  const out = [
+    <rect key={kp + 'g'} x={x - 1} y={y - 1} width={w + 2} height={h + 2} rx="3" fill={shade(color, -0.15)} />,
+    <polygon key={kp + 't'} points={`${x},${y} ${x + w},${y} ${x + w - b},${y + b} ${x + b},${y + b}`} fill={shade(color, 0.32)} />,
+    <polygon key={kp + 'l'} points={`${x},${y} ${x + b},${y + b} ${x + b},${y + h - b} ${x},${y + h}`} fill={shade(color, 0.15)} />,
+    <polygon key={kp + 'r'} points={`${x + w},${y} ${x + w},${y + h} ${x + w - b},${y + h - b} ${x + w - b},${y + b}`} fill={shade(color, -0.15)} />,
+    <polygon key={kp + 'bo'} points={`${x},${y + h} ${x + w},${y + h} ${x + w - b},${y + h - b} ${x + b},${y + h - b}`} fill={shade(color, -0.25)} />,
+  ];
+  if (arch) {
+    out.push(<path key={kp + 'gl'} d={`M${gx},${gy + gh} L${gx},${gy + r} A${r},${r} 0 0 1 ${gx + gw},${gy + r} L${gx + gw},${gy + gh} Z`} fill="url(#glass)" stroke="rgba(0,0,0,0.25)" strokeWidth="0.7" />);
+  } else {
+    out.push(<rect key={kp + 'gl'} x={gx} y={gy} width={gw} height={gh} rx="1" fill="url(#glass)" stroke="rgba(0,0,0,0.25)" strokeWidth="0.7" />);
+  }
+  if (cathedral) out.push(<line key={kp + 'm'} x1={gx + gw / 2} y1={gy} x2={gx + gw / 2} y2={gy + gh} stroke="rgba(0,0,0,0.22)" strokeWidth="1" />);
+  return out;
+}
+
+function DoorPreview({ ratio, colorHex, style, windows, hardware, wFeet, dark }) {
   const VBW = 460, VBH = 360, groundY = 318;
   const BOX_W = 360, BOX_H = 236, boxRatio = BOX_W / BOX_H;
   let doorW, doorH;
@@ -26,66 +70,38 @@ function DoorPreview({ ratio, colorHex, style, windows, hardware, dark }) {
   const top = groundY - doorH;
   const sections = 4;
   const secH = doorH / sections;
-  const cols = Math.min(6, Math.max(2, Math.round(doorW / 72)));
-  const frame = 'rgba(0,0,0,0.28)';
+  const color = colorHex || '#f3f3f0';
+  const cols = Math.min(9, Math.max(2, Math.round((wFeet || 16) / 2))); // ~1 panel per 2 ft
+  const field = shade(color, -0.05); // recessed section field
   const showHardware = hardware === 'carriage';
+  const arch = windows === 'arched' || windows === 'cathedral';
 
   const els = [];
-  // Panels per section
   for (let s = 0; s < sections; s++) {
     const y = top + s * secH;
-    els.push(<rect key={`sec${s}`} x={left} y={y} width={doorW} height={secH} fill={colorHex} stroke={frame} strokeWidth="1" />);
-    const mY = secH * 0.17, mX = Math.min(14, doorW * 0.03);
-    const pTop = y + mY, pH = secH - mY * 2;
+    els.push(<rect key={`sec${s}`} x={left} y={y} width={doorW} height={secH} fill={field} />);
+    const mX = Math.max(6, doorW * 0.025);
 
-    if (style === 'flush') {
-      els.push(<line key={`fl${s}`} x1={left} y1={y} x2={left + doorW} y2={y} stroke="rgba(0,0,0,0.14)" strokeWidth="1" />);
+    if (s === 0 && windows !== 'none') {
+      const mY = secH * 0.18, gap = 6, ww = (doorW - mX * 2 - gap * (cols - 1)) / cols;
+      for (let i = 0; i < cols; i++) els.push(...windowLite(`w${i}`, left + mX + i * (ww + gap), y + mY, ww, secH - mY * 2, arch, windows === 'cathedral', color));
+    } else if (style === 'flush') {
+      // flat section — no raised panels
     } else if (style === 'long') {
-      const n = doorW > 300 ? 2 : 1;
-      const gap = 10, pw = (doorW - mX * 2 - gap * (n - 1)) / n;
-      for (let i = 0; i < n; i++) {
-        const px = left + mX + i * (pw + gap);
-        els.push(<rect key={`lp${s}-${i}`} x={px} y={pTop} width={pw} height={pH} rx="3" fill={colorHex} stroke="rgba(0,0,0,0.22)" strokeWidth="1.4" />);
-        els.push(<line key={`lh${s}-${i}`} x1={px + 2} y1={pTop + 2} x2={px + pw - 2} y2={pTop + 2} stroke="rgba(255,255,255,0.28)" strokeWidth="1.4" />);
-      }
+      const mY = secH * 0.16, pTop = y + mY, pH = secH - mY * 2;
+      const n = doorW > 300 ? 2 : 1, gap = 9, pw = (doorW - mX * 2 - gap * (n - 1)) / n;
+      for (let i = 0; i < n; i++) els.push(...raisedPanel(`lp${s}-${i}`, left + mX + i * (pw + gap), pTop, pw, pH, color));
     } else if (style === 'carriage') {
-      const planks = Math.min(10, cols * 2), gap = 3;
-      const pw = (doorW - mX * 2 - gap * (planks - 1)) / planks;
-      for (let i = 0; i < planks; i++) {
-        const px = left + mX + i * (pw + gap);
-        els.push(<rect key={`cp${s}-${i}`} x={px} y={pTop} width={pw} height={pH} rx="1.5" fill={colorHex} stroke="rgba(0,0,0,0.26)" strokeWidth="1" />);
-        els.push(<line key={`ch${s}-${i}`} x1={px + pw / 2} y1={pTop} x2={px + pw / 2} y2={pTop + pH} stroke="rgba(0,0,0,0.10)" strokeWidth="0.8" />);
-      }
+      const mY = secH * 0.14, pTop = y + mY, pH = secH - mY * 2;
+      const planks = Math.min(12, Math.max(4, cols * 2)), gap = 2.4, pw = (doorW - mX * 2 - gap * (planks - 1)) / planks;
+      for (let i = 0; i < planks; i++) els.push(...raisedPanel(`cp${s}-${i}`, left + mX + i * (pw + gap), pTop, pw, pH, color));
     } else { // short
-      const gap = 8, pw = (doorW - mX * 2 - gap * (cols - 1)) / cols;
-      for (let i = 0; i < cols; i++) {
-        const px = left + mX + i * (pw + gap);
-        els.push(<rect key={`sp${s}-${i}`} x={px} y={pTop} width={pw} height={pH} rx="3" fill={colorHex} stroke="rgba(0,0,0,0.22)" strokeWidth="1.4" />);
-        els.push(<line key={`sh${s}-${i}`} x1={px + 2} y1={pTop + 2} x2={px + pw - 2} y2={pTop + 2} stroke="rgba(255,255,255,0.28)" strokeWidth="1.3" />);
-      }
+      const mY = secH * 0.16, pTop = y + mY, pH = secH - mY * 2;
+      const gap = 6, pw = (doorW - mX * 2 - gap * (cols - 1)) / cols;
+      for (let i = 0; i < cols; i++) els.push(...raisedPanel(`sp${s}-${i}`, left + mX + i * (pw + gap), pTop, pw, pH, color));
     }
-  }
-
-  // Windows on the top section
-  if (windows !== 'none') {
-    const y = top, mY = secH * 0.2, mX = Math.min(14, doorW * 0.03);
-    const wCount = Math.min(6, Math.max(3, cols));
-    const gap = 8, ww = (doorW - mX * 2 - gap * (wCount - 1)) / wCount;
-    const wy = y + mY, wh = secH - mY * 2;
-    for (let i = 0; i < wCount; i++) {
-      const wx = left + mX + i * (ww + gap);
-      const arch = windows === 'arched' || windows === 'cathedral';
-      if (arch) {
-        const r = ww / 2;
-        const d = `M${wx},${wy + wh} L${wx},${wy + r} A${r},${r} 0 0 1 ${wx + ww},${wy + r} L${wx + ww},${wy + wh} Z`;
-        els.push(<path key={`w${i}`} d={d} fill="#d7e6f1" stroke="rgba(0,0,0,0.35)" strokeWidth="1.4" />);
-      } else {
-        els.push(<rect key={`w${i}`} x={wx} y={wy} width={ww} height={wh} rx="2" fill="#d7e6f1" stroke="rgba(0,0,0,0.35)" strokeWidth="1.4" />);
-      }
-      if (windows === 'cathedral') {
-        els.push(<line key={`wm${i}`} x1={wx + ww / 2} y1={wy} x2={wx + ww / 2} y2={wy + wh} stroke="rgba(0,0,0,0.28)" strokeWidth="1.1" />);
-      }
-    }
+    // recessed horizontal seam between sections
+    if (s > 0) els.push(<rect key={`seam${s}`} x={left} y={y - 1} width={doorW} height="2" fill={shade(color, -0.2)} />);
   }
 
   // Decorative hardware — strap hinges at each side + two pull handles
@@ -107,6 +123,13 @@ function DoorPreview({ ratio, colorHex, style, windows, hardware, dark }) {
           <stop offset="0" stopColor={dark ? '#20242c' : '#eef1f4'} />
           <stop offset="1" stopColor={dark ? '#171a20' : '#e3e7ec'} />
         </linearGradient>
+        <linearGradient id="glass" x1="0" y1="0" x2="0.4" y2="1">
+          <stop offset="0" stopColor="#eaf2f8" />
+          <stop offset="0.5" stopColor="#cfe0ec" />
+          <stop offset="1" stopColor="#e3edf4" />
+        </linearGradient>
+        <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+          <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.16 0 0 0 0" /></filter>
       </defs>
       <rect x="0" y="0" width={VBW} height={groundY} fill="url(#wallg)" />
       <rect x="0" y={groundY} width={VBW} height={VBH - groundY} fill={dark ? '#0f1116' : '#cfd3d9'} />
@@ -115,6 +138,10 @@ function DoorPreview({ ratio, colorHex, style, windows, hardware, dark }) {
       {/* opening surround */}
       <rect x={left - 8} y={top - 8} width={doorW + 16} height={doorH + 8} fill="none" stroke={dark ? '#3a4150' : '#cbd0d8'} strokeWidth="7" />
       {els}
+      {/* subtle steel/stucco grain over the door */}
+      <rect x={left} y={top} width={doorW} height={doorH} filter="url(#grain)" opacity="0.5" pointerEvents="none" />
+      {/* door outer edge */}
+      <rect x={left} y={top} width={doorW} height={doorH} fill="none" stroke={shade(color, -0.28)} strokeWidth="1.4" />
     </svg>
   );
 }
@@ -182,7 +209,7 @@ export default function DoorBuilder() {
         {/* Preview */}
         <div className="db-preview-col">
           <div className="db-preview">
-            <DoorPreview ratio={ratio} colorHex={chosen.color?.hex || '#f3f3f0'} style={sel.style} windows={sel.windows} hardware={sel.hardware} />
+            <DoorPreview ratio={ratio} colorHex={chosen.color?.hex || '#f3f3f0'} style={sel.style} windows={sel.windows} hardware={sel.hardware} wFeet={chosen.size?.w} />
           </div>
           <div className="db-summary">
             {showPrices && (
