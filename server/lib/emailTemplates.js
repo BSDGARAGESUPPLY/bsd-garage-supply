@@ -235,4 +235,48 @@ function accountApproved(user) {
   return { subject: 'Your BSD Garage Supply account is approved', html: layout('Approved', body) };
 }
 
-module.exports = { welcome, orderConfirmation, orderInvoice, newOrderAdmin, orderShipped, passwordReset, contactMessage, newAccountPending, accountApproved };
+// ── Door builder quote (to owner) ────────────────────────────────────────────
+function configRows(config) {
+  return Object.entries(config || {}).map(([k, v]) => `
+    <tr><td style="padding:7px 0;color:#888;width:150px;text-transform:capitalize;">${k}</td>
+        <td style="padding:7px 0;font-weight:600;">${v}</td></tr>`).join('');
+}
+
+function doorQuoteOwner({ name, email, phone, zip, notes, config, estPrice }) {
+  const body = `
+    <h1 style="margin:0 0 8px;font-size:22px;font-weight:700;">🚪 New garage door quote request</h1>
+    <p style="margin:0 0 18px;font-size:15px;color:#444;">A customer designed a door and wants a quote.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;">
+      <tr><td style="padding:6px 0;color:#888;width:120px;">Name</td><td style="padding:6px 0;"><strong>${name}</strong></td></tr>
+      <tr><td style="padding:6px 0;color:#888;">Email</td><td style="padding:6px 0;"><a href="mailto:${email}" style="color:${GOLD};">${email}</a></td></tr>
+      ${phone ? `<tr><td style="padding:6px 0;color:#888;">Phone</td><td style="padding:6px 0;">${phone}</td></tr>` : ''}
+      ${zip ? `<tr><td style="padding:6px 0;color:#888;">ZIP</td><td style="padding:6px 0;">${zip}</td></tr>` : ''}
+    </table>
+    <div style="margin:20px 0 6px;font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:${GOLD};">Door configuration</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-top:1px solid #eee;">
+      ${configRows(config)}
+      ${estPrice ? `<tr><td style="padding:10px 0 0;color:#888;border-top:1px solid #eee;">Est. price</td><td style="padding:10px 0 0;font-weight:800;border-top:1px solid #eee;color:${GOLD};">${money(estPrice)}</td></tr>` : ''}
+    </table>
+    ${notes ? `<div style="margin-top:16px;padding:14px 16px;background:#f7f7f7;border-radius:10px;font-size:14px;line-height:1.6;color:#333;white-space:pre-wrap;">${String(notes).replace(/</g,'&lt;')}</div>` : ''}
+    <p style="margin:18px 0 0;font-size:13px;color:#888;">Reply directly to this email to send ${name} a quote.</p>`;
+  return { subject: `Door quote request — ${name}`, html: layout('Door quote', body) };
+}
+
+// ── Door quote confirmation (to customer) ────────────────────────────────────
+function doorQuoteCustomer({ name, config, estPrice }) {
+  const body = `
+    <h1 style="margin:0 0 12px;font-size:23px;font-weight:700;">Thanks, ${name}! 🚪</h1>
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#444;">
+      We got your custom garage door design and we're preparing your quote — you'll hear from us within one business day.
+    </p>
+    <div style="margin:0 0 6px;font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:${GOLD};">Your design</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-top:1px solid #eee;">
+      ${configRows(config)}
+      ${estPrice ? `<tr><td style="padding:10px 0 0;color:#888;border-top:1px solid #eee;">Estimate</td><td style="padding:10px 0 0;font-weight:800;border-top:1px solid #eee;color:${GOLD};">${money(estPrice)}*</td></tr>` : ''}
+    </table>
+    ${estPrice ? `<p style="margin:10px 0 0;font-size:12px;color:#aaa;">*Estimate only — we'll confirm your exact price in your quote.</p>` : ''}
+    <p style="margin:16px 0 0;font-size:14px;color:#444;">Questions? Call us at <strong>1-888-844-4701</strong>.</p>`;
+  return { subject: 'We received your garage door design — BSD Garage Supply', html: layout('Door design received', body) };
+}
+
+module.exports = { welcome, orderConfirmation, orderInvoice, newOrderAdmin, orderShipped, passwordReset, contactMessage, newAccountPending, accountApproved, doorQuoteOwner, doorQuoteCustomer };

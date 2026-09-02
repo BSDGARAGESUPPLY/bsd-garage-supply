@@ -1,0 +1,50 @@
+.db-page { padding-bottom: 64px; }
+
+.db-hero { background: var(--ink); color: #fff; padding: 44px 0 40px; }
+.db-hero h1 { font-size: clamp(2rem, 4vw, 2.8rem); font-weight: 800; letter-spacing: -0.02em; color: #fff; }
+.db-hero p { margin-top: 10px; max-width: 620px; color: var(--on-dark-dim); font-size: 15px; line-height: 1.55; }
+
+.db-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 28px; margin-top: 32px; align-items: start; }
+
+/* Preview column (sticky) */
+.db-preview-col { position: sticky; top: 88px; display: flex; flex-direction: column; gap: 16px; }
+.db-preview { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden; }
+.door-svg { width: 100%; height: auto; display: block; }
+
+.db-summary { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 20px 22px; }
+.db-price { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.db-price-label { font-size: 13px; color: var(--text-secondary); }
+.db-price-value { font-size: 30px; font-weight: 800; color: var(--gold-dark); letter-spacing: -0.01em; }
+.db-config { list-style: none; margin: 0 0 16px; padding: 0; border-top: 1px solid var(--border); }
+.db-config li { display: flex; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
+.db-config li span { color: var(--text-secondary); }
+.db-config li strong { color: var(--text-primary); text-align: right; }
+.db-price-note { margin-top: 10px; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+/* Options column */
+.db-options-col { display: flex; flex-direction: column; gap: 22px; }
+.db-group-label { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary); margin-bottom: 10px; }
+.db-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+
+.db-pill { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 11px 16px; border: 2px solid var(--border-strong); border-radius: var(--radius-sm); background: #fff; color: var(--text-primary); font-weight: 600; font-size: 14px; cursor: pointer; transition: all var(--transition-fast); }
+.db-pill:hover { border-color: var(--gold-border); }
+.db-pill.active { border-color: var(--gold); background: var(--gold-bg); }
+.db-add { font-size: 12px; color: var(--text-secondary); font-weight: 700; }
+
+.db-choices.swatch { gap: 12px; }
+.db-swatch { display: flex; flex-direction: column; align-items: center; gap: 6px; border: none; background: none; cursor: pointer; width: 62px; }
+.db-swatch-dot { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--border-strong); box-shadow: inset 0 -3px 6px rgba(0,0,0,0.18); transition: all var(--transition-fast); }
+.db-swatch:hover .db-swatch-dot { border-color: var(--gold-border); }
+.db-swatch.active .db-swatch-dot { border-color: var(--gold); box-shadow: inset 0 -3px 6px rgba(0,0,0,0.18), 0 0 0 3px rgba(200,146,42,0.25); }
+.db-swatch-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.db-swatch.active .db-swatch-label { color: var(--text-primary); }
+
+/* Quote modal config recap */
+.db-quote-config { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 12px 14px; background: var(--bg-alt); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; }
+.db-quote-config b { color: var(--text-primary); font-weight: 700; }
+.db-quote-price { margin-left: auto; color: var(--gold-dark); font-weight: 800; }
+
+@media (max-width: 900px) {
+  .db-layout { grid-template-columns: 1fr; }
+  .db-preview-col { position: static; }
+}
