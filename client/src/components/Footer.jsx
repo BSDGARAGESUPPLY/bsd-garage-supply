@@ -37,6 +37,7 @@ export default function Footer() {
             <li><Link to="/catalog?category=torsion-springs">Torsion Springs</Link></li>
             <li><Link to="/catalog?category=brackets-hardware">Brackets & Hardware</Link></li>
             <li><Link to="/catalog?category=garage-door-openers">Garage Door Openers</Link></li>
+            <li><Link to="/catalog?category=new-garage-doors">New Garage Doors</Link></li>
             <li><Link to="/catalog">View All Products</Link></li>
           </ul>
           <h4 style={{marginTop: '24px'}}>Account</h4>

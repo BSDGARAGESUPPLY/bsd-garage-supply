@@ -82,6 +82,8 @@ function ensureSeed(db) {
     'End bearing brackets, center mounts, hinges, and bearings for complete garage door assemblies.');
   ensureCat('Garage Door Openers', 'garage-door-openers',
     'Residential and commercial garage door openers, remotes, keypads, and opener accessories.');
+  ensureCat('New Garage Doors', 'new-garage-doors',
+    'New residential and commercial garage doors in a range of sizes — in stock and ready to go.');
 
   // ── Products (only if empty) ──
   const productCount = db.prepare('SELECT COUNT(*) c FROM products').get().c;
